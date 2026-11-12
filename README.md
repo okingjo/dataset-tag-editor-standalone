@@ -2,6 +2,8 @@
 
 [日本語 Readme](README-JP.md)
 
+> **Independently maintained fork.** Upstream ([toshiaki1729/dataset-tag-editor-standalone](https://github.com/toshiaki1729/dataset-tag-editor-standalone)) has been inactive since **July 2024**, so this fork is maintained on its own. It adds a self-contained **uv** install (isolated from system Python), **Smart Tag Dedup** (offline rules or a local LLM), **booru tag autocompletion** (a1111-sd-webui-tagcomplete compatible), and **large-dataset performance** improvements. Run it with `launch_uv.bat` (Windows) or `webui_uv.sh` (Linux/macOS) — see the install instructions below.
+
 This is a WebUI tool to edit training dataset for Text2Image Models.  
 This is **a standalone version** of [Dataset Tag Editor](https://github.com/toshiaki1729/stable-diffusion-webui-dataset-tag-editor), which is an extension for [Stable Diffusion web UI by AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui).  
 **Please do not put into `extensions` folder of AUTOMATIC1111's webUI.**
