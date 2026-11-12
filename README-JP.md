@@ -2,6 +2,8 @@
 
 [English Readme](README.md)
 
+> **独立してメンテナンスされているフォークです。** 上流 ([toshiaki1729/dataset-tag-editor-standalone](https://github.com/toshiaki1729/dataset-tag-editor-standalone)) は **2024年7月**から更新が止まっているため、このフォークを独立して維持しています。uv による自己完結インストール（システム Python を汚染しない）、**Smart Tag Dedup**（オフラインルールまたはローカル LLM）、**booru タグ自動補完**（a1111-sd-webui-tagcomplete 互換）、大規模データセット向けの**パフォーマンス**改善を追加しています。起動は `launch_uv.bat` (Windows) または `webui_uv.sh` (Linux/macOS) を使用してください。
+
 web UI 上で学習用データセットのキャプションを編集できるようにします。  
 こちらは、[Dataset Tag Editor](https://github.com/toshiaki1729/stable-diffusion-webui-dataset-tag-editor)のスタンドアロン版です（元のプログラムは[Stable Diffusion web UI by AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui)用の拡張機能です）。
 
@@ -24,40 +26,37 @@ DeepBooru interrogator で生成したような、カンマ区切り形式のキ
 
 
 ## Requirements
-要件は `requirements.txt` に全て記載されています。  
+依存関係は全て `pyproject.toml` / `uv.lock` に固定されており、uv が自動的にインストールします。
 
-**以下をはじめにインストールしてください。**
-- [Python](https://www.python.org/) >= 3.9 (3.10.11で開発しています)  
-- [PyTorch](https://pytorch.org/) with CUDA >= 1.10.0 ([TorchDeepDanbooru](https://github.com/AUTOMATIC1111/TorchDeepDanbooru)が使用する[onnx-pytorch](https://github.com/fumihwh/onnx-pytorch)の要件)  
-PyTorchのバージョンは[transformers](https://github.com/huggingface/transformers)に依存しています。手動で特定のバージョンをインストールする場合は [transformersのインストールの説明](https://github.com/huggingface/transformers#installation)に従ってください。
-
-DirectMLを使用する際は、venvに手動でインストールしてください ([pytorch-directml](https://pypi.org/project/pytorch-directml/)をインストールすると有効化されます)。ただし私toshiaki1729の環境ではテストができない為、動作の保証はできません。
-
+**自分でインストールするのは [uv](https://docs.astral.sh/uv/) だけです。**
+uv が専用の Python インタプリタ (3.11) と全ての依存関係（PyTorch や wd-tagger が使用する [ONNX runtime](https://onnxruntime.ai/) を含む）をこのフォルダ内にダウンロードします。
+システム Python は不要で、PyTorch の手動インストールや実行時のパッケージインストールも一切ありません。
 
 ## インストール方法
-### Windows
-`install.bat`を起動してください。  
+1. uv を一度だけインストールします: <https://docs.astral.sh/uv/getting-started/installation/>
+2. アプリを起動します（初回起動時に uv が環境を作成し、固定された依存関係をインストールします）:
+   - **Windows:** `launch_uv.bat` をダブルクリック
+   - **Linux / macOS:** `./webui_uv.sh`
 
-### Linux (またはWindowsで手動でインストールするとき)
-このリポジトリのルートディレクトリで、以下のコマンドを実行してください。
+起動せずにインストールだけ行う場合は `uv sync` を実行してください。`pyproject.toml` / `uv.lock` のピンは Gradio 4.28.3 で動作確認済みの組み合わせです。
+
+デフォルトでは **CPU 版 PyTorch** がインストールされます。NVIDIA GPU を使用する場合は `uv sync` の後に以下を実行してください:
 ```sh
-python3 -m venv --system-site-packages venv
-source ./venv/bin/activate
-pip3 install -r requirements.txt
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+uv run --no-sync scripts/launch.py
 ```
-(Note: Windowsでのvenvの有効化は `.\venv\Scripts\activate` と読み替えてください。)
+(`--no-sync` はロックされた CPU 版に戻さず CUDA 版を維持します。)
 
 
 ## 起動方法
 `-h` または `--help` をコマンドライン引数に指定することで、利用可能なコマンドライン引数の一覧を取得できます。
 
 ### Windows
-`launch_user.bat` を起動してください。
+`launch_uv.bat` を起動してください。
 
-### Linux
+### Linux / macOS
 ```sh
-source ./venv/bin/activate
-python scripts/launch.py [arguments]
+./webui_uv.sh [arguments]
 ```
 
 ### Google Colab
@@ -67,10 +66,11 @@ Google Colabユーザーは、以下のコマンドを実行し、生成され�
 
 ```sh
 %cd /content
-!git clone https://github.com/toshiaki1729/dataset-tag-editor-standalone.git
+!git clone https://github.com/okingjo/dataset-tag-editor-standalone.git
 %cd /content/dataset-tag-editor-standalone
-!pip install -r requirements.txt
-!python scripts/launch.py --share
+!pip install uv
+!uv sync
+!uv run scripts/launch.py --share
 ```
 
 ## 特徴
@@ -175,15 +175,9 @@ Google Colabユーザーは、以下のコマンドを実行し、生成され�
 ![](pic/ss13.png) 
 
 ### PyTorch が CUDA を使っていない
-- 他のスクリプトと共有するために PyTorch をシステムにインストールする場合
-  1. [PyTorchのインストール方法](https://pytorch.org/get-started/locally/) に従って、ただし`-U` (`--upgrade`) をつけてインストールする  
-  (例) ```pip3 install -U torch torchvision --index-url https://download.pytorch.org/whl/cu118```
-  1. `venv` フォルダを削除する
-  1. `install.bat` を実行する
-- PyTorch を venv のみにインストールする場合  
-  venvを`activate`した後にPytorchを`-U`オプションを付けてインストールする、もしくは以下の手順を行ってください。  
-  1. `launch_user.bat` をテキストエディタで開く
-  2. 3行目を `set COMMANDLINE_ARGS="--force-install-torch cu118"` に変える  
-  (`cu117`、`cu118`、`cu121` または `cpu` から選べます)
-  3. `launch_user.bat` を実行する
-  4. (付け足したコマンドライン引数を削除する)
+デフォルトでは CPU 版 PyTorch がインストールされます。専用の `.venv` を CUDA 版に切り替えるには:
+```sh
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+uv run --no-sync scripts/launch.py
+```
+`--no-sync` はロックされた CPU 版に戻さず CUDA 版を維持するため、起動は `uv run --no-sync scripts/launch.py` を使用してください（`launch_uv.bat` は CPU 版を再同期します）。

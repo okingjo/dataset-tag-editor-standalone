@@ -1,7 +1,6 @@
 from PIL import Image
 import numpy as np
 from typing import Tuple
-import torch
 
 import launch, utilities, settings, devices
 from paths import paths
@@ -32,41 +31,13 @@ class WaifuDiffusionTagger:
                     "CPUExecutionProvider",
                 ]
 
-            def check_available_device():
-
-                if torch.cuda.is_available():
-                    return "cuda"
-                elif launch.is_installed("torch-directml"):
-                    # This code cannot detect DirectML available device without pytorch-directml
-                    try:
-                        import torch_directml
-                        torch_directml.device()
-                    except:
-                        pass
-                    else:
-                        return "directml"
-                return "cpu"
-
+            # onnxruntime is a declared dependency (pyproject.toml), pre-installed
+            # by uv. Never pip-install anything at runtime.
             if not launch.is_installed("onnxruntime"):
-                dev = check_available_device()
-                if dev == "cuda":
-                    launch.run_pip(
-                        "install -U onnxruntime-gpu",
-                        "onnxruntime-gpu",
-                    )
-                elif dev == "directml":
-                    launch.run_pip(
-                        "install -U onnxruntime-directml",
-                        "onnxruntime-directml",
-                    )
-                else:
-                    print(
-                        "Your device is not compatible with onnx hardware acceleration. CPU only version will be installed and it may be very slow."
-                    )
-                    launch.run_pip(
-                        "install -U onnxruntime",
-                        "onnxruntime for CPU",
-                    )
+                raise RuntimeError(
+                    "onnxruntime is not installed. Start the app with launch_uv.bat / "
+                    "webui_uv.sh (or run `uv sync` first) to install the pinned dependencies."
+                )
             import onnxruntime as ort
 
             print(f"Running ONNX on {ort.get_device()}")

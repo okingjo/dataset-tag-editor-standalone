@@ -25,17 +25,12 @@ Caption in the filenames of images can be loaded, but edited captions can only b
 
 
 ## Requirements
-All requirements are listed in `requirements.txt`  
+All dependencies are pinned in `pyproject.toml` / `uv.lock` and installed automatically by uv.
 
-
-**Please install the followings first:**  
-- [Python](https://www.python.org/) >= 3.9 (Developed on 3.10.11)  
-- [PyTorch](https://pytorch.org/) with CUDA >= 1.10.0 ([onnx-pytorch](https://github.com/fumihwh/onnx-pytorch) requirement; for [TorchDeepDanbooru](https://github.com/AUTOMATIC1111/TorchDeepDanbooru))  
-PyTorch version mostly depends on [transformers](https://github.com/huggingface/transformers), please follow [the instruction to install transformers](https://github.com/huggingface/transformers#installation) if install specific version manually.
-
-If you want to use DirectML, please install manually in venv  (install [pytorch-directml](https://pypi.org/project/pytorch-directml/) to enable, **not tested**).
-
-This script will install [ONNX runtime](https://onnxruntime.ai/) **automatically** in `venv` before using wd-taggers by SmilingWolf.
+**The only thing you need to install yourself is [uv](https://docs.astral.sh/uv/).**
+It downloads a private Python interpreter (3.11) and every dependency — including PyTorch
+and the [ONNX runtime](https://onnxruntime.ai/) used by the wd-taggers — into this folder.
+No system Python, no manual PyTorch setup, no runtime package installation.
 
 ## Installation
 
@@ -60,32 +55,16 @@ uv run --no-sync scripts/launch.py
 ```
 (`--no-sync` keeps the CUDA build instead of restoring the locked CPU one.)
 
-### Alternative: pip / venv (legacy)
-#### Windows
-Just run `install.bat`
-
-#### Linux (or install manually on Windows)
-Run following commands on the root directory of this repo.
-```sh
-python3 -m venv --system-site-packages venv
-source ./venv/bin/activate
-pip3 install -r requirements.txt
-```
-(Note: just `.\venv\Scripts\activate` is needed to activate venv on Windows)
-
-
 ## Launch
 You can see available command line args with `-h` or `--help` option.
 
 ### Windows
-Just run `launch_uv.bat` (uv) or `launch_user.bat` (pip/venv).
+Just run `launch_uv.bat`.
 
-### Linux
+### Linux / macOS
 ```sh
-source ./venv/bin/activate
-python scripts/launch.py [arguments]
+./webui_uv.sh [arguments]
 ```
-Or with uv: `./webui_uv.sh [arguments]`
 
 ### Google Colab
 
@@ -94,10 +73,11 @@ Google Colab users can using it by executing the following command and accessing
 
 ```sh
 %cd /content
-!git clone https://github.com/toshiaki1729/dataset-tag-editor-standalone.git
+!git clone https://github.com/okingjo/dataset-tag-editor-standalone.git
 %cd /content/dataset-tag-editor-standalone
-!pip install -r requirements.txt
-!python scripts/launch.py --share
+!pip install uv
+!uv sync
+!uv run scripts/launch.py --share
 ```
 
 ## Features
@@ -260,14 +240,10 @@ It may not work with dataset with millions of images.
 
 
 ### My PyTorch is working without CUDA
-- To install PyTorch in your system to share it with other scripts
-  1. Follow [the PyTorch installation guide](https://pytorch.org/get-started/locally/) with `-U` (`--upgrade`) option  
-  (example) ```pip3 install -U torch torchvision --index-url https://download.pytorch.org/whl/cu118```
-  1. Remove `venv` folder
-  1. Run `install.bat`
-- To install PyTorch only in venv  
-  `activate` venv and install PyTorch with `-U` option, or do the following things:  
-  1. Open `launch_user.bat` with some text editor
-  2. Change the 3rd line to `set COMMANDLINE_ARGS="--force-install-torch cu118"` (you can choose from `cu117`, `cu118`, `cu121` or `cpu`)
-  3. Run `launch_user.bat`
-  4. (Remove the command line argument)
+The default install is CPU-only PyTorch. To switch the private `.venv` to a CUDA build:
+```sh
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+uv run --no-sync scripts/launch.py
+```
+`--no-sync` keeps the CUDA build instead of restoring the locked CPU one, so launch with
+`uv run --no-sync scripts/launch.py` (`launch_uv.bat` would re-sync the CPU pins).

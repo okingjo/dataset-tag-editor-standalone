@@ -19,7 +19,6 @@ import cmd_args, logger
 # ================================================================
 # brought from AUTOMATIC1111/stable-diffusion-webui and modified
 
-python = sys.executable
 
 
 def check_python_version():
@@ -56,39 +55,19 @@ def run(command):
     )
 
 
-def run_pip(args, desc=None):
-    if desc is not None:
-        print(f"Installing {desc}")
-
-    command = f'"{sys.executable}" -m pip {args}'
-    result = run(command)
-    if result.returncode != 0:
-        message = f"""
-Couldn't Install {desc}.
-Command: {command}
-Error code: {result.returncode}
-stdout: {result.stdout.decode(encoding="utf8", errors="ignore") if len(result.stdout)>0 else '<empty>'}
-stderr: {result.stderr.decode(encoding="utf8", errors="ignore") if len(result.stderr)>0 else '<empty>'}
-"""
-        raise RuntimeError(message)
-
-
 # ================================================================
 
 
 def prepare_environment():
-    if cmd_args.opts.force_install_torch is None:
-        pass
-    elif cmd_args.opts.force_install_torch == "cpu":
-        torch_command = "pip install -U torch torchvision"
-    else:
-        torch_command = f"pip install -U torch torchvision --index-url https://download.pytorch.org/whl/{cmd_args.opts.force_install_torch}"
-    if (
-        not is_installed("torch")
-        or not is_installed("torchvision")
-        or cmd_args.opts.force_install_torch is not None
-    ):
-        run(f'"{python}" -m {torch_command}')
+    # Dependencies are managed by uv (pyproject.toml / uv.lock). Nothing is
+    # pip-installed at runtime: if torch is missing, the environment was not
+    # created by uv, so fail with guidance instead of installing packages.
+    if not is_installed("torch") or not is_installed("torchvision"):
+        logger.error(
+            "PyTorch is not installed. Start the app with launch_uv.bat / webui_uv.sh "
+            "(or run `uv sync` first) so the pinned dependencies are installed into .venv."
+        )
+        raise SystemExit(1)
     check_python_version()
 
     import devices
