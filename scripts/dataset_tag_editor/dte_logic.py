@@ -33,6 +33,10 @@ re_newlines = re.compile(r"[\r\n]+")
 re_numbers_at_start = re.compile(r"^[-\d]+\s*")
 
 
+class DedupPreviewRequiredError(RuntimeError):
+    """Smart Dedup Apply was requested without an up-to-date preview."""
+
+
 def get_square_rgb(data:Image.Image):
     data = utilities.get_rgb_image(data)
     max_size = max(data.size)
@@ -541,25 +545,62 @@ class DatasetTagEditor(Singleton):
 
         mode: "rules" (offline implication table) or "llm" (chat API).
         With apply=False nothing is modified; the planned removals are only
-        returned (preview). Returns [(img_path, [removed tags]), ...].
+        returned (preview) and cached. apply=True reuses that cached preview
+        (no second LLM pass) and raises DedupPreviewRequiredError when no
+        up-to-date preview exists. Returns [(img_path, [removed tags]), ...].
         """
         from . import tag_dedup
 
         img_paths = self.get_filtered_imgpaths(filters)
+
+        if apply:
+            cached = getattr(self, "_dedup_preview_cache", None)
+            signature = self._dedup_signature(img_paths, mode, llm_options, rules_path)
+            if cached is None or cached["signature"] != signature:
+                raise DedupPreviewRequiredError(
+                    "No up-to-date preview to apply. Click Preview first "
+                    "(and re-run Preview if you changed filters, tags or dedup "
+                    "settings since the last preview)."
+                )
+            details = []
+            changed = 0
+            removed_total = 0
+            for path in img_paths:
+                removals = cached["removals"].get(path)
+                if removals:
+                    tags = self.dataset.get_data_tags(path)
+                    details.append((path, removals))
+                    self.set_tags_by_image_path(
+                        path, [t for t in tags if t not in removals], rebuild=False
+                    )
+                    changed += 1
+                    removed_total += len(removals)
+            self._dedup_preview_cache = None
+            self.last_dedup_errors = list(cached["errors"])
+            self.construct_tag_infos()
+            logger.write(
+                f"Smart dedup ({mode}): applied cached preview, removed "
+                f"{removed_total} tags from {changed}/{len(img_paths)} images"
+            )
+            return details
+
         rules = tag_dedup.load_rules(rules_path) if mode != "llm" else None
         cache: dict[tuple, list[str]] = {}
         details = []
         self.last_dedup_errors: list[str] = []
-        changed = 0
-        removed_total = 0
+        removals_by_path: dict[str, list[str]] = {}
+        tag_fingerprint = []
+        cancelled = False
         total = len(img_paths)
         for i, path in enumerate(img_paths):
             if should_cancel is not None and should_cancel():
                 logger.write("Smart dedup cancelled by user.")
+                cancelled = True
                 break
             if progress is not None:
                 progress((i + 1) / max(total, 1), desc=f"Smart dedup {i + 1}/{total}")
             tags = self.dataset.get_data_tags(path)
+            tag_fingerprint.append((path, tuple(tags)))
             key = tuple(sorted(tag_dedup.normalize(t) for t in tags))
             if key not in cache:
                 try:
@@ -573,19 +614,31 @@ class DatasetTagEditor(Singleton):
             removals = cache[key]
             if removals:
                 details.append((path, removals))
-                if apply:
-                    self.set_tags_by_image_path(
-                        path, [t for t in tags if t not in removals], rebuild=False
-                    )
-                    changed += 1
-                    removed_total += len(removals)
-        if apply:
-            self.construct_tag_infos()
-            logger.write(
-                f"Smart dedup ({mode}): removed {removed_total} tags "
-                f"from {changed}/{len(img_paths)} images"
-            )
+                removals_by_path[path] = removals
+        if cancelled:
+            self._dedup_preview_cache = None
+        else:
+            self._dedup_preview_cache = {
+                "signature": (
+                    tuple(img_paths), tuple(tag_fingerprint),
+                    mode, llm_options, rules_path,
+                ),
+                "removals": removals_by_path,
+                "errors": list(self.last_dedup_errors),
+            }
         return details
+
+    def _dedup_signature(self, img_paths, mode, llm_options, rules_path):
+        """Fingerprint of everything a dedup result depends on: the filtered
+        images, their current tags, and the dedup mode/settings. A preview may
+        only be applied while this signature is unchanged."""
+        return (
+            tuple(img_paths),
+            tuple((p, tuple(self.dataset.get_data_tags(p))) for p in img_paths),
+            mode,
+            llm_options,
+            rules_path,
+        )
 
     def remove_tags(self, tags: set[str], filters: list[filters.Filter] = []):
         img_paths = self.get_filtered_imgpaths(filters)

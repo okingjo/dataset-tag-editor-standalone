@@ -5,6 +5,7 @@ import gradio as gr
 import threading
 
 import settings
+from dataset_tag_editor.dte_logic import DedupPreviewRequiredError
 from .ui_common import *
 from .uibase import UIBase
 from .block_tag_select import TagSelectUI
@@ -149,7 +150,10 @@ class BatchEditCaptionsUI(UIBase):
                     "<b>LLM API</b>: let a chat model decide. Configure the endpoint "
                     "in Settings (OpenAI-compatible: llama.cpp / Ollama / vLLM / "
                     "OpenAI, or Anthropic). Identical tag sets are cached, so each "
-                    "unique caption is sent only once."
+                    "unique caption is sent only once.<br>"
+                    "<b>Apply</b> reuses the last Preview result (no second LLM "
+                    "run). Run Preview first; if you change filters, tags or dedup "
+                    "settings afterwards, run Preview again."
                 )
                 self.rb_dedup_mode = gr.Radio(
                     ["Rules (offline)", "LLM API"],
@@ -421,10 +425,14 @@ class BatchEditCaptionsUI(UIBase):
 
         def dedup_apply(mode: str, progress=gr.Progress()):
             _dedup_cancel.clear()
-            details = dte_instance.smart_dedup_tags(
-                get_filters(), apply=True, progress=progress,
-                should_cancel=_dedup_cancel.is_set, **dedup_kwargs(mode)
-            )
+            try:
+                details = dte_instance.smart_dedup_tags(
+                    get_filters(), apply=True, progress=progress,
+                    should_cancel=_dedup_cancel.is_set, **dedup_kwargs(mode)
+                )
+            except DedupPreviewRequiredError as e:
+                # No (up-to-date) preview: guide the user, change nothing.
+                return [str(e)] + [gr.update() for _ in o_update_filter_and_gallery]
             return [
                 format_dedup_result(details, dte_instance.last_dedup_errors)
             ] + update_filter_and_gallery()
