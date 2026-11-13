@@ -859,8 +859,12 @@ class DatasetTagEditor(Singleton):
 
         try:
             filepaths = img_dir_obj.rglob("*") if recursive else img_dir_obj.glob("*")
-            filepaths = [p for p in filepaths if p.is_file()]
-            estimated_image_num = len([p for p in filepaths if p.suffix.lower() in Image.registered_extensions()])
+            # Only treat files with a registered image extension as images.
+            # PIL opens files by content, so backup files such as Krita's
+            # "aaa.jpg~" / "bbb.png~" would otherwise be loaded as images.
+            image_exts = Image.registered_extensions()
+            filepaths = [p for p in filepaths if p.is_file() and p.suffix.lower() in image_exts]
+            estimated_image_num = len(filepaths)
         except Exception as e:
             logger.error(f"Cannot load dataset from directory: {img_dir}")
             logger.error(e)

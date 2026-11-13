@@ -222,14 +222,11 @@ class TagFilterUI:
             )
         
         
-        tags_in_filter = set()
-        if self.filter_word:
-            # Show only tags with the search words for better use
-            for tag in self.filter.tags:
-                if self.filter_word in tag:
-                    tags_in_filter.add(tag)
-        else:
-            tags_in_filter = self.filter.tags
+        # Selected tags that are currently visible. Intersecting with the
+        # filtered list reuses the same prefix/suffix/regex rules as the
+        # display; a literal substring here broke "Select visible tags"
+        # whenever "Use regex" was enabled.
+        tags_in_filter = self.filter.tags & tags
         
         tags -= tags_in_filter
 

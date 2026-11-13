@@ -112,8 +112,21 @@ class FilterBySelectionUI(UIBase):
             img_path = self.selected_path
             if img_path:
                 self.tmp_selection.remove(img_path)
-                self.selected_path = ""
-                self.selected_index = -1
+                remaining = arrange_selection_order(self.tmp_selection)
+                if remaining:
+                    # After a removal the gallery re-highlights the item at
+                    # the same position (the "next" image) on the frontend,
+                    # but that programmatic highlight does not fire a select
+                    # event. Advance our state to match it so consecutive
+                    # Delete presses keep removing images without needing an
+                    # arrow-key round-trip to re-sync the selection.
+                    idx = self.selected_index if self.selected_index >= 0 else 0
+                    idx = min(idx, len(remaining) - 1)
+                    self.selected_index = idx
+                    self.selected_path = remaining[idx]
+                else:
+                    self.selected_path = ""
+                    self.selected_index = -1
 
             return [
                 [

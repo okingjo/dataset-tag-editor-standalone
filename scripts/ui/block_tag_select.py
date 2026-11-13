@@ -127,7 +127,8 @@ class TagSelectUI:
 
     def btn_deselect_visibles_clicked(self, cbg_tags: list[str]):
         tags = dte_instance.get_filtered_tags(
-            self.get_filters(), self.filter_word, True
+            self.get_filters(), self.filter_word, True,
+            prefix=self.prefix, suffix=self.suffix, regex=self.regex,
         )
         selected_tags = set(dte_instance.read_tags(cbg_tags)) & tags
         self.selected_tags -= selected_tags
@@ -135,7 +136,10 @@ class TagSelectUI:
 
     def btn_select_visibles_clicked(self):
         tags = set(
-            dte_instance.get_filtered_tags(self.get_filters(), self.filter_word, True)
+            dte_instance.get_filtered_tags(
+                self.get_filters(), self.filter_word, True,
+                prefix=self.prefix, suffix=self.suffix, regex=self.regex,
+            )
         )
         self.selected_tags |= tags
         return self.cbg_tags_update()
