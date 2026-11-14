@@ -85,6 +85,11 @@
         var caret = ta.selectionStart || 0;
         var before = ta.value.slice(0, caret);
         var start = Math.max(before.lastIndexOf(","), before.lastIndexOf("\n")) + 1;
+        // Keep the whitespace between the separator and the word out of the
+        // replacement range so inserting a tag does not eat the space typed
+        // after the comma ("white hair, hairc" -> "white hair, hair clip").
+        var rest = before.slice(start);
+        start += rest.length - rest.replace(/^\s+/, "").length;
         return { text: before.slice(start), start: start, end: caret };
     }
 
