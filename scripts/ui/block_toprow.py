@@ -10,60 +10,68 @@ if TYPE_CHECKING:
 
 
 class ToprowUI(UIBase):
-    def create_ui(self, cfg_general):
-        with gr.Column(variant="panel"):
-            with gr.Row():
-                with gr.Column(scale=1):
-                    self.btn_save_all_changes = gr.Button(
-                        value="Save all changes", variant="primary"
-                    )
-                with gr.Column(scale=2):
-                    self.cb_backup = gr.Checkbox(
-                        value=cfg_general.backup,
-                        label="Backup original text file (original file will be renamed like filename.000, .001, .002, ...)",
-                        interactive=True,
-                    )
+    def create_ui_inline(self, cfg_general):
+        """Save controls rendered inside the global dataset bar (single row)
+        so loading and saving share one compact strip above the tabs."""
+        self.btn_save_all_changes = gr.Button(
+            value="Save all changes", variant="primary", scale=2, min_width=150
+        )
+        self.cb_backup = gr.Checkbox(
+            value=cfg_general.backup,
+            label="Backup originals (.000, .001, ...)",
+            interactive=True,
+            scale=2,
+        )
+        self.cb_save_kohya_metadata = gr.Checkbox(
+            value=cfg_general.save_kohya_metadata,
+            label="kohya-ss metadata json",
+            interactive=True,
+            scale=2,
+        )
+
+    def create_ui_rest(self, cfg_general):
+        with gr.Accordion(
+            label="Metadata json options",
+            open=False,
+            visible=cfg_general.save_kohya_metadata,
+        ) as self.cl_kohya_metadata:
             gr.HTML(
                 value="<b>Note:</b> New text file will be created if you are using filename as captions."
             )
+            self.tb_metadata_output = gr.Textbox(
+                label="json path",
+                placeholder="C:\\path\\to\\metadata.json",
+                value=cfg_general.meta_output_path,
+            )
+            self.tb_metadata_input = gr.Textbox(
+                label="json input path (Optional, only for append results)",
+                placeholder="C:\\path\\to\\metadata.json",
+                value=cfg_general.meta_input_path,
+            )
             with gr.Row():
-                self.cb_save_kohya_metadata = gr.Checkbox(
-                    value=cfg_general.save_kohya_metadata,
-                    label="Use kohya-ss's finetuning metadata json",
+                self.cb_metadata_overwrite = gr.Checkbox(
+                    value=cfg_general.meta_overwrite,
+                    label="Overwrite if output file exists",
                     interactive=True,
                 )
+                self.cb_metadata_as_caption = gr.Checkbox(
+                    value=cfg_general.meta_save_as_caption,
+                    label="Save metadata as caption",
+                    interactive=True,
+                )
+                self.cb_metadata_use_fullpath = gr.Checkbox(
+                    value=cfg_general.meta_use_full_path,
+                    label="Save metadata image key as fullpath",
+                    interactive=True,
+                )
+        with gr.Row(visible=False):
+            self.txt_result = gr.Textbox(label="Results", interactive=False)
+
+    def create_ui(self, cfg_general):
+        with gr.Column(elem_classes=["topbar"]):
             with gr.Row():
-                with gr.Column(
-                    variant="panel", visible=cfg_general.save_kohya_metadata
-                ) as self.cl_kohya_metadata:
-                    self.tb_metadata_output = gr.Textbox(
-                        label="json path",
-                        placeholder="C:\\path\\to\\metadata.json",
-                        value=cfg_general.meta_output_path,
-                    )
-                    self.tb_metadata_input = gr.Textbox(
-                        label="json input path (Optional, only for append results)",
-                        placeholder="C:\\path\\to\\metadata.json",
-                        value=cfg_general.meta_input_path,
-                    )
-                    with gr.Row():
-                        self.cb_metadata_overwrite = gr.Checkbox(
-                            value=cfg_general.meta_overwrite,
-                            label="Overwrite if output file exists",
-                            interactive=True,
-                        )
-                        self.cb_metadata_as_caption = gr.Checkbox(
-                            value=cfg_general.meta_save_as_caption,
-                            label="Save metadata as caption",
-                            interactive=True,
-                        )
-                        self.cb_metadata_use_fullpath = gr.Checkbox(
-                            value=cfg_general.meta_use_full_path,
-                            label="Save metadata image key as fullpath",
-                            interactive=True,
-                        )
-            with gr.Row(visible=False):
-                self.txt_result = gr.Textbox(label="Results", interactive=False)
+                self.create_ui_inline(cfg_general)
+        self.create_ui_rest(cfg_general)
 
     def set_callbacks(self, load_dataset: LoadDatasetUI):
         def save_all_changes(

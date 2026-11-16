@@ -178,6 +178,100 @@ class DatasetTagEditor(Singleton):
                             res = cap.predict(img)
             return ", ".join(res)
 
+    def interrogate_loaded(
+        self,
+        imgpaths: list[str],
+        interrogate_method: InterrogateMethod,
+        interrogator_names: list[str],
+        threshold_waifu: float,
+        threshold_z3d: float,
+        threshold_pixai: float,
+        progress_cb=None,
+    ) -> tuple[int, int]:
+        """Interrogate already-loaded images and merge tags per method.
+
+        Same merge semantics as load_dataset (PREFILL only fills empty
+        captions, OVERWRITE replaces, PREPEND/APPEND add). Returns
+        (processed, skipped). Tag changes are NOT marked as loaded
+        signatures, so Save all changes writes them out.
+        """
+        if interrogate_method == self.InterrogateMethod.NONE or not imgpaths:
+            return (0, 0)
+        tagger_thresholds: list[tuple[Tagger, float]] = []
+        for it in self.INTERROGATORS:
+            if it.name() in interrogator_names:
+                if isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
+                    tagger_thresholds.append((it, threshold_waifu))
+                elif isinstance(it, taggers_builtin.PixAI):
+                    tagger_thresholds.append((it, threshold_pixai))
+                elif isinstance(it, taggers_builtin.Z3D_E621):
+                    tagger_thresholds.append((it, threshold_z3d))
+                else:
+                    tagger_thresholds.append((it, None))
+        if not tagger_thresholds:
+            return (0, 0)
+
+        targets = [
+            p for p in imgpaths
+            if interrogate_method != self.InterrogateMethod.PREFILL
+            or not [t for t in self.get_tags_by_image_path(p) if t.strip()]
+        ]
+        if not targets:
+            return (0, len(imgpaths))
+
+        interrogate_tags: dict[str, list[str]] = {p: [] for p in targets}
+        logger.write(f"Interrogating {len(targets)} loaded images...")
+        try:
+            imgs = [get_square_rgb(Image.open(p)) for p in targets]
+        except Exception as e:
+            logger.error(f"Cannot preprocess images for interrogating: {e}")
+            return (0, len(imgpaths))
+        for tg, th in tagger_thresholds:
+            tg.start()
+            try:
+                try:
+                    tg.predict_pipe(None)
+                    use_pipe = True
+                except NotImplementedError:
+                    use_pipe = False
+                done = 0
+                if use_pipe:
+                    for p, tags in zip(targets, tg.predict_pipe(imgs, th)):
+                        interrogate_tags[p] += tags
+                        done += 1
+                        if progress_cb:
+                            progress_cb(done, len(targets), tg.name())
+                else:
+                    for p, im in zip(targets, imgs):
+                        interrogate_tags[p] += tg.predict(im, th)
+                        done += 1
+                        if progress_cb:
+                            progress_cb(done, len(targets), tg.name())
+            except Exception as e:
+                logger.error(traceback.format_exc())
+                logger.error(e)
+            finally:
+                tg.stop()
+
+        processed = 0
+        for p in targets:
+            # empty captions surface as ['']; drop blanks like load_captions does
+            tags = [t for t in self.get_tags_by_image_path(p) if t.strip()]
+            itags = [t for t in interrogate_tags[p] if t.strip()]
+            if interrogate_method == self.InterrogateMethod.OVERWRITE or (
+                interrogate_method == self.InterrogateMethod.PREFILL and not tags
+            ):
+                tags = itags
+            elif interrogate_method == self.InterrogateMethod.PREPEND:
+                tags = itags + tags
+            else:  # APPEND
+                tags = tags + itags
+            self.set_tags_by_image_path(p, tags, rebuild=False)
+            processed += 1
+        self.construct_tag_infos()
+        logger.write(f"Interrogation completed: {processed} images tagged")
+        return (processed, len(imgpaths) - len(targets))
+
     def get_tag_list(self):
         if len(self.tag_counts) == 0:
             self.construct_tag_infos()

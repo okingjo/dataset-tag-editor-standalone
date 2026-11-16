@@ -206,3 +206,60 @@ button.custom-button{
     font-size: 85%;
     opacity: 0.85;
 }
+
+/* ---- page margins & panel breathing room ---- */
+
+/* keep all content off the viewport edges */
+.gradio-container .contain.contain {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+}
+
+/* accordions in gradio 4.28 are .block.padded with a > button.label-wrap;
+   the general reset below must not strip their inner padding, or the
+   checkboxes/dropdowns inside touch the panel edges */
+.block.padded:has(> .label-wrap) {
+    padding: 10px 14px !important;
+}
+
+/* compact global dataset bar above the workflow tabs */
+.dataset-bar {
+    align-items: flex-end !important;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 6px 14px !important;
+    border: 1px solid var(--border-color-primary);
+    border-radius: 8px;
+}
+.dataset-bar label span {
+    font-size: 0.8em;
+}
+.dataset-bar .block.padded {
+    padding: 0;
+}
+.dataset-bar .block label {
+    margin-bottom: 0;
+}
+.dataset-bar .block label span {
+    display: block;
+    margin-bottom: 4px;
+}
+.dataset-bar .block textarea {
+    height: 34px;
+    min-height: 34px;
+}
+.dataset-bar button {
+    height: 36px;
+    min-height: 36px;
+}
+
+/* compact save/backup topbar */
+.topbar {
+    padding: 8px 14px !important;
+    border: 1px solid var(--border-color-primary);
+    border-radius: 8px;
+    gap: 8px;
+}
+.topbar .gradio-checkbox {
+    margin: 0 1em 0 0;
+}

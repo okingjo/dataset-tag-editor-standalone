@@ -12,24 +12,38 @@ if TYPE_CHECKING:
 
 class LoadDatasetUI(UIBase):
 
+    def create_ui_global(self, cfg_general, toprow=None):
+        """Compact dataset bar rendered above the workflow tabs: every tab
+        operates on the folder loaded here. Save controls share the same row
+        to keep the strip above the tabs as short as possible."""
+        with gr.Row(elem_classes=["dataset-bar"]):
+            self.tb_img_directory = gr.Textbox(
+                label="Dataset directory",
+                placeholder="C:\\directory\\of\\datasets",
+                value=cfg_general.dataset_dir,
+                scale=4,
+                min_width=200,
+            )
+            self.tb_caption_file_ext = gr.Textbox(
+                label="Caption ext",
+                placeholder=".txt (on Load and Save)",
+                value=cfg_general.caption_ext,
+                scale=1,
+                min_width=90,
+            )
+            self.btn_load_datasets = gr.Button(
+                value="Load", variant="primary", scale=0, min_width=70
+            )
+            self.btn_unload_datasets = gr.Button(
+                value="Unload", scale=0, min_width=70
+            )
+            if toprow is not None:
+                toprow.create_ui_inline(cfg_general)
+        if toprow is not None:
+            toprow.create_ui_rest(cfg_general)
+
     def create_ui(self, cfg_general):
         with gr.Column(variant="panel"):
-            with gr.Row():
-                with gr.Column(scale=3):
-                    self.tb_img_directory = gr.Textbox(
-                        label="Dataset directory",
-                        placeholder="C:\\directory\\of\\datasets",
-                        value=cfg_general.dataset_dir,
-                    )
-                with gr.Column(scale=1, min_width=60):
-                    self.tb_caption_file_ext = gr.Textbox(
-                        label="Caption File Ext",
-                        placeholder=".txt (on Load and Save)",
-                        value=cfg_general.caption_ext,
-                    )
-                with gr.Column(scale=1, min_width=80):
-                    self.btn_load_datasets = gr.Button(value="Load")
-                    self.btn_unload_datasets = gr.Button(value="Unload")
             with gr.Accordion(label="Dataset Load Settings"):
                 with gr.Row():
                     with gr.Column():
@@ -57,14 +71,27 @@ class LoadDatasetUI(UIBase):
                             value=cfg_general.use_interrogator,
                             label="Use Interrogator Caption",
                         )
-                        self.dd_intterogator_names = gr.Dropdown(
-                            label="Interrogators",
-                            choices=dte_instance.INTERROGATOR_NAMES,
-                            value=cfg_general.use_interrogator_names,
-                            interactive=True,
-                            multiselect=True,
-                        )
-            with gr.Accordion(label="Interrogator Settings", open=False):
+            with gr.Accordion(label="Interrogator", open=False):
+                self.dd_intterogator_names = gr.Dropdown(
+                    label="Interrogators",
+                    choices=dte_instance.INTERROGATOR_NAMES,
+                    value=cfg_general.use_interrogator_names,
+                    interactive=True,
+                    multiselect=True,
+                )
+                gr.Markdown(
+                    "Tag the **currently filtered images** with the selected "
+                    "interrogators. Merge method comes from *Use Interrogator "
+                    "Caption* in Dataset Load Settings (If Empty / Overwrite / "
+                    "Prepend / Append)."
+                )
+                with gr.Row():
+                    self.btn_interrogate = gr.Button(
+                        value="Start tagging", variant="primary", scale=1
+                    )
+                    self.txt_interrogate_status = gr.Textbox(
+                        label="Status", interactive=False, scale=3
+                    )
                 with gr.Row():
                     self.sl_custom_threshold_z3d = gr.Slider(
                         minimum=0,
@@ -107,6 +134,7 @@ class LoadDatasetUI(UIBase):
         filter_by_selection: FilterBySelectionUI,
         batch_edit_captions: BatchEditCaptionsUI,
         update_filter_and_gallery: Callable[[], list],
+        get_filters: Callable[[], list],
     ):
         def load_files_from_dir(
             dir: str,
@@ -218,4 +246,63 @@ class LoadDatasetUI(UIBase):
         ).then(
             fn=lambda:update_filter_and_gallery(),
             outputs=o_update_filter_and_gallery
+        )
+
+        def interrogate_filtered(
+            use_interrogator: str,
+            use_interrogator_names: list[str],
+            use_custom_threshold_waifu: bool,
+            custom_threshold_waifu: float,
+            custom_threshold_z3d: float,
+            custom_threshold_pixai: float,
+            progress=gr.Progress(),
+        ):
+            if len(dte_instance.dataset) == 0:
+                return "Load a dataset first."
+            interrogate_method = dte_instance.InterrogateMethod.NONE
+            if use_interrogator == "If Empty":
+                interrogate_method = dte_instance.InterrogateMethod.PREFILL
+            elif use_interrogator == "Overwrite":
+                interrogate_method = dte_instance.InterrogateMethod.OVERWRITE
+            elif use_interrogator == "Prepend":
+                interrogate_method = dte_instance.InterrogateMethod.PREPEND
+            elif use_interrogator == "Append":
+                interrogate_method = dte_instance.InterrogateMethod.APPEND
+            if interrogate_method == dte_instance.InterrogateMethod.NONE:
+                return 'Set "Use Interrogator Caption" (Dataset Load Settings) to a method other than No.'
+            if not use_interrogator_names:
+                return "Select at least one interrogator."
+            paths = dte_instance.get_filtered_imgpaths(filters=get_filters())
+            if not paths:
+                return "No images match the current filters."
+            threshold_waifu = custom_threshold_waifu if use_custom_threshold_waifu else -1
+
+            def progress_cb(done, total, name):
+                progress(done / total, desc=f"{name}: {done}/{total}")
+
+            processed, skipped = dte_instance.interrogate_loaded(
+                paths,
+                interrogate_method,
+                use_interrogator_names,
+                threshold_waifu,
+                custom_threshold_z3d,
+                custom_threshold_pixai,
+                progress_cb=progress_cb,
+            )
+            return f"Done: {processed} images tagged, {skipped} skipped. Save all changes to write the captions."
+
+        self.btn_interrogate.click(
+            fn=interrogate_filtered,
+            inputs=[
+                self.rb_use_interrogator,
+                self.dd_intterogator_names,
+                self.cb_use_custom_threshold_waifu,
+                self.sl_custom_threshold_waifu,
+                self.sl_custom_threshold_z3d,
+                self.sl_custom_threshold_pixai,
+            ],
+            outputs=[self.txt_interrogate_status],
+        ).then(
+            fn=lambda: update_filter_and_gallery(),
+            outputs=o_update_filter_and_gallery,
         )

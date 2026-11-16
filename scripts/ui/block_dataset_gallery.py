@@ -23,8 +23,13 @@ class DatasetGalleryUI(UIBase):
         with gr.Row():
             # [PERF] pagination controls
             self.btn_prev_page = gr.Button(value="← Prev Page", scale=1)
-            self.txt_page_info = gr.Markdown(value="Page 1/1")
+            self.txt_page_info = gr.Markdown(value="Page 1/1", elem_id="gallery_page_info")
             self.btn_next_page = gr.Button(value="Next Page →", scale=1)
+        # Hidden jump-to-page control used by the arrow-key navigation JS
+        # (javascript/gallery_page_nav.js) to cross page boundaries.
+        with gr.Row(visible=False):
+            self.nb_goto_page = gr.Number(value=1, precision=0, elem_id="gallery_goto_page_num")
+            self.btn_goto_page = gr.Button(elem_id="gallery_goto_page_btn")
         self.gl_dataset_images = gr.Gallery(
             label="Dataset Images", elem_id="dataset_gallery", columns=image_columns)
         self.get_filters = get_filters
@@ -78,3 +83,12 @@ class DatasetGalleryUI(UIBase):
 
         self.btn_prev_page.click(fn=go_prev_page, outputs=o_update_gallery)
         self.btn_next_page.click(fn=go_next_page, outputs=o_update_gallery)
+
+        def go_to_page(n):
+            try:
+                self.page = max(0, int(n) - 1)
+            except (TypeError, ValueError):
+                pass
+            return update_gallery()
+
+        self.btn_goto_page.click(fn=go_to_page, inputs=self.nb_goto_page, outputs=o_update_gallery)

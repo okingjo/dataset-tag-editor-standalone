@@ -186,7 +186,7 @@ def on_ui_tabs():
         """
         )
 
-        ui.toprow.create_ui(cfg_general)
+        ui.load_dataset.create_ui_global(cfg_general, ui.toprow)
 
         with gr.Accordion(label="Reload/Save Settings (config.json)", open=False):
             with gr.Row():
@@ -415,7 +415,8 @@ def on_ui_tabs():
             ui.filter_by_tags,
             ui.filter_by_selection,
             ui.batch_edit_captions,
-            update_filter_and_gallery
+            update_filter_and_gallery,
+            get_filters
         )
         ui.dataset_gallery.set_callbacks(ui.gallery_state, update_gallery, o_update_gallery)
         ui.gallery_state.set_callbacks(ui.dataset_gallery)
