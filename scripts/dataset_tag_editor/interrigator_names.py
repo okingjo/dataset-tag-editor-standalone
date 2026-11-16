@@ -11,3 +11,9 @@ WD_TAGGERS_TIMM = {
     "wd-vit-large-v14-tagger": 0.35,
     "wd-eva02-large-tagger-v3": 0.35,
 }
+
+# PixAI Tagger v1.0 (ONNX). The value is the GENERAL-category threshold;
+# other categories use the official per-category operating points internally.
+PIXAI_TAGGERS = {
+    "pixai-tagger-v1.0": 0.17,
+}

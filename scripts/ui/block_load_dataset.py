@@ -75,6 +75,15 @@ class LoadDatasetUI(UIBase):
                         label="Z3D-E621 Score Threshold",
                     )
                 with gr.Row():
+                    self.sl_custom_threshold_pixai = gr.Slider(
+                        minimum=0,
+                        maximum=1,
+                        value=cfg_general.custom_threshold_pixai,
+                        step=0.01,
+                        interactive=True,
+                        label="PixAI General Tag Threshold (other categories use official defaults)",
+                    )
+                with gr.Row():
                     self.cb_use_custom_threshold_waifu = gr.Checkbox(
                         value=cfg_general.use_custom_threshold_waifu,
                         label="Use Custom Threshold (WD Tagger)",
@@ -110,6 +119,7 @@ class LoadDatasetUI(UIBase):
             use_custom_threshold_waifu: bool,
             custom_threshold_waifu: float,
             custom_threshold_z3d: float,
+            custom_threshold_pixai: float,
             use_kohya_metadata: bool,
             kohya_json_path: str,
         ):
@@ -125,6 +135,7 @@ class LoadDatasetUI(UIBase):
 
             threshold_waifu = custom_threshold_waifu if use_custom_threshold_waifu else -1
             threshold_z3d = custom_threshold_z3d
+            threshold_pixai = custom_threshold_pixai
 
             dte_instance.load_dataset(
                 dir,
@@ -136,6 +147,7 @@ class LoadDatasetUI(UIBase):
                 use_interrogator_names,
                 threshold_waifu,
                 threshold_z3d,
+                threshold_pixai,
                 settings.current.use_temp_files,
                 kohya_json_path if use_kohya_metadata else None,
                 settings.current.max_resolution
@@ -176,6 +188,7 @@ class LoadDatasetUI(UIBase):
                 self.cb_use_custom_threshold_waifu,
                 self.sl_custom_threshold_waifu,
                 self.sl_custom_threshold_z3d,
+                self.sl_custom_threshold_pixai,
                 toprow.cb_save_kohya_metadata,
                 toprow.tb_metadata_output,
             ],

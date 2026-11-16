@@ -2,7 +2,8 @@ from PIL import Image
 from typing import Optional
 
 from tagger import Tagger, get_replaced_tag
-from .interrogators import WaifuDiffusionTagger, WaifuDiffusionTaggerTimm
+from .interrogators import PixAITagger, WaifuDiffusionTagger, WaifuDiffusionTaggerTimm
+from .interrogators.pixai_tagger import CATEGORY_THRESHOLDS as PIXAI_CATEGORY_THRESHOLDS
 
 
 class WaifuDiffusion(Tagger):
@@ -87,6 +88,54 @@ class WaifuDiffusionTimm(Tagger):
                     tags = [get_replaced_tag(tag) for tag, _ in labels]
 
                 yield tags
+
+    def name(self):
+        return self.repo_name
+
+
+class PixAI(Tagger):
+    """PixAI Tagger v1.0 (ONNX). `threshold` overrides the GENERAL-category
+    threshold only; character/style/copyright/meta keep the official
+    per-category operating points, rating is taken as argmax."""
+
+    def __init__(self, repo_name, threshold, use_rating=False, batch_size=4):
+        self.repo_name = repo_name
+        self.tagger_inst = PixAITagger()
+        self.threshold = threshold
+        self.use_rating = use_rating
+        self.batch_size = batch_size
+
+    def start(self):
+        self.tagger_inst.load()
+        return self
+
+    def stop(self):
+        self.tagger_inst.unload()
+
+    def _select(self, labels, threshold):
+        if threshold is None or threshold < 0:
+            threshold = self.threshold
+        thr = dict(PIXAI_CATEGORY_THRESHOLDS)
+        thr["general"] = threshold
+        tags = []
+        rating_best = None
+        for tag, value, cat in labels:
+            if cat == "rating":
+                if rating_best is None or value > rating_best[1]:
+                    rating_best = (tag, value)
+                continue
+            if value > thr[cat]:
+                tags.append(get_replaced_tag(tag))
+        if self.use_rating and rating_best is not None:
+            tags.append(get_replaced_tag(rating_best[0]))
+        return tags
+
+    def predict(self, image: Image.Image, threshold: Optional[float] = None):
+        return self._select(self.tagger_inst.apply(image), threshold)
+
+    def predict_pipe(self, data: list[Image.Image], threshold: Optional[float] = None):
+        for labels in self.tagger_inst.apply_multi(data, batch_size=self.batch_size):
+            yield self._select(labels, threshold)
 
     def name(self):
         return self.repo_name

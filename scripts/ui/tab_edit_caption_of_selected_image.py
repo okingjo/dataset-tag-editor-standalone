@@ -261,6 +261,7 @@ class EditCaptionOfSelectedImageUI(UIBase):
             use_threshold_waifu: bool,
             threshold_waifu: float,
             threshold_z3d: float,
+            threshold_pixai: float,
         ):
             if not interrogator_name:
                 return ""
@@ -270,6 +271,7 @@ class EditCaptionOfSelectedImageUI(UIBase):
                 interrogator_name,
                 threshold_waifu,
                 threshold_z3d,
+                threshold_pixai,
             )
 
         self.btn_interrogate_si.click(
@@ -279,6 +281,7 @@ class EditCaptionOfSelectedImageUI(UIBase):
                 load_dataset.cb_use_custom_threshold_waifu,
                 load_dataset.sl_custom_threshold_waifu,
                 load_dataset.sl_custom_threshold_z3d,
+                load_dataset.sl_custom_threshold_pixai,
             ],
             outputs=[self.tb_interrogate],
         )

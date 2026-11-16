@@ -270,6 +270,54 @@ Workflow:
 4. Re-run step 3 any time after editing — `.multi` is always re-derivable from
    `.txt` + `.nl.txt`; only the master data needs maintenance.
 
+### Serving the NL captioner (verified model choices)
+
+The base model **Qwen/Qwen3.5-35B-A3B** is natively multimodal (vision encoder
+built in — there is no separate "VL" variant), 35B total / 3B active MoE.
+Uncensored options that keep vision working:
+
+- **Ollama (easiest):** `ollama pull huihui_ai/qwen3.5-abliterated:35b`
+  (Q4_K_M, ~24 GB, text+image input; needs Ollama ≥ 0.17.5). Higher quality:
+  `huihui_ai/qwen3.5-abliterated:35b-a3b-q8_0` (~39 GB). Then set
+  *NL Caption VLM base URL* to `http://<host>:11434/v1` and model to
+  `huihui_ai/qwen3.5-abliterated:35b` (the app default).
+- **llama.cpp (best community reputation for NSFW captioning):**
+  `HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive` GGUF — download the
+  main quant **and** the `mmproj-…-f16.gguf` vision projector (required for
+  image input), then:
+  `llama-server -m Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf --mmproj mmproj-Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-f16.gguf --jinja -c 8192 --port 8080`
+  and point the app at `http://<host>:8080/v1` with the model name you passed
+  (or the default alias). Q4_K_M ≈ 21 GB + 0.9 GB mmproj fits a 24 GB GPU;
+  Q8_0 ≈ 37 GB suits 48 GB+ or unified-memory boxes.
+- vLLM: serve `huihui-ai/Huihui-Qwen3.5-35B-A3B-abliterated` (BF16, ~67 GB).
+
+Notes:
+
+- Keep **thinking mode off** for batch captioning (the app default) — cleaner
+  single-paragraph output; enable it in Settings if you want deeper reasoning.
+- Avoid temperature 0 with quantized Qwen3-family models (repetition loops);
+  the app uses 0.7 by default.
+- Abliteration removes refusals, but community reports say the huihui build's
+  NSFW *visual vocabulary* can be shallow; the HauhauCS Aggressive build is
+  preferred for explicit datasets. Test a few samples before batch-running.
+
+### Tagger notes
+
+- **PixAI Tagger v1.0** runs from the DirectML-validated ONNX export
+  `Mexes/pixai-tagger-v1.0-onnx-fp32-fp16-int8` (fp16 on GPU, fp32 on CPU;
+  ~947 MiB download on first use). It uses the official per-category
+  thresholds internally (character 0.27, style 0.15, copyright 0.24, meta
+  0.17, rating argmax); the *PixAI General Tag Threshold* slider (default
+  0.17) tunes only the general category. Rating tags are included only when
+  *Use Rating tags* is enabled in Settings.
+- WD v3 / large timm taggers keep the single WD threshold slider as before.
+- Tagging speed: the default `onnxruntime` wheel is CPU-only (~11 s/image
+  for PixAI on a desktop CPU). For GPU acceleration swap the package (the
+  taggers automatically prefer CUDA / DirectML when present):
+  Windows `uv pip uninstall onnxruntime && uv pip install onnxruntime-directml`
+  (any DX12 GPU), Linux+CUDA `onnxruntime-gpu`. Note `uv sync` reinstalls the
+  CPU wheel from `pyproject.toml`, so re-apply the swap after syncing.
+
 Training-side notes (kohya sd-scripts):
 
 - Point the dataset at `caption_extension = ".multi"` for Anima/MOSS. A dataset

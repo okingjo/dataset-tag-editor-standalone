@@ -23,7 +23,7 @@ from . import (
     taggers_builtin
 )
 from .custom_scripts import CustomScripts
-from .interrigator_names import WD_TAGGERS, WD_TAGGERS_TIMM
+from .interrigator_names import PIXAI_TAGGERS, WD_TAGGERS, WD_TAGGERS_TIMM
 from scripts.tokenizer import clip_tokenizer
 from scripts.tagger import Tagger
 from cmd_args import opts
@@ -146,12 +146,16 @@ class DatasetTagEditor(Singleton):
                 taggers_builtin.WaifuDiffusionTimm(name, threshold, settings.current.tagger_use_rating, read_wd_batchsize(name))
                 for name, threshold in WD_TAGGERS_TIMM.items()
             ]
+            + [
+                taggers_builtin.PixAI(name, threshold, settings.current.tagger_use_rating, settings.current.batch_size_pixai)
+                for name, threshold in PIXAI_TAGGERS.items()
+            ]
             + [taggers_builtin.Z3D_E621()]
             + [cls_tagger() for cls_tagger in custom_taggers]
         )
         self.INTERROGATOR_NAMES = [it.name() for it in self.INTERROGATORS]
     
-    def interrogate_image(self, path: str, interrogator_name: str, threshold_wd, threshold_z3d):
+    def interrogate_image(self, path: str, interrogator_name: str, threshold_wd, threshold_z3d, threshold_pixai):
         try:
             img = Image.open(path)
             img = get_square_rgb(img)
@@ -163,6 +167,9 @@ class DatasetTagEditor(Singleton):
                     if isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
                         with it as tg:
                             res = tg.predict(img, threshold_wd)
+                    elif isinstance(it, taggers_builtin.PixAI):
+                        with it as tg:
+                            res = tg.predict(img, threshold_pixai)
                     elif isinstance(it, taggers_builtin.Z3D_E621):
                         with it as tg:
                             res = tg.predict(img, threshold_z3d)
@@ -829,6 +836,7 @@ class DatasetTagEditor(Singleton):
         interrogator_names: list[str],
         threshold_waifu: float,
         threshold_z3d: float,
+        threshold_pixai: float,
         use_temp_dir: bool,
         kohya_json_path: Optional[str], 
         max_res:float
@@ -962,6 +970,8 @@ class DatasetTagEditor(Singleton):
                 if it.name() in interrogator_names:
                     if isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
                         tagger_thresholds.append((it, threshold_waifu))
+                    elif isinstance(it, taggers_builtin.PixAI):
+                        tagger_thresholds.append((it, threshold_pixai))
                     elif isinstance(it, taggers_builtin.Z3D_E621):
                         tagger_thresholds.append((it, threshold_z3d))
                     else:

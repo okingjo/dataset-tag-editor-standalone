@@ -39,10 +39,11 @@ class Settings(NamedTuple):
     batch_size_convnext:int = 4
     batch_size_swinv2:int = 4
     batch_size_eva02_large:int = 4
+    batch_size_pixai:int = 4
     # Natural-language captioning via an OpenAI-compatible VLM server
     # (Ollama / llama.cpp / vLLM), e.g. an uncensored Qwen3.5-35B-A3B.
     caption_llm_base_url: str = "http://127.0.0.1:11434/v1"
-    caption_llm_model: str = "qwen3.5-35b-a3b-uncensored"
+    caption_llm_model: str = "huihui_ai/qwen3.5-abliterated:35b"
     caption_llm_api_key: str = ""
     caption_llm_timeout: float = 300.0
     caption_llm_enable_thinking: bool = False
@@ -90,8 +91,9 @@ DESCRIPTIONS = {
     "batch_size_convnext": "Inference batch size for ConvNeXt taggers",
     "batch_size_swinv2": "Inference batch size for SwinV2 taggers",
     "batch_size_eva02_large": "Inference batch size for EVA-02 large taggers",
+    "batch_size_pixai": "Inference batch size for PixAI Tagger v1.0 (1008x1008 input; lower it if VRAM is tight)",
     "caption_llm_base_url": "NL Caption VLM base URL (OpenAI-compatible), e.g. http://127.0.0.1:11434/v1 (Ollama) or http://127.0.0.1:8080 (llama.cpp)",
-    "caption_llm_model": "NL Caption VLM model name, e.g. an uncensored Qwen3.5-35B-A3B vision model served by Ollama/vLLM",
+    "caption_llm_model": "NL Caption VLM model name. Ollama: huihui_ai/qwen3.5-abliterated:35b (Q4_K_M, vision) or :35b-a3b-q8_0; llama.cpp: the model name you gave llama-server (e.g. HauhauCS Qwen3.5-35B-A3B Uncensored Aggressive GGUF + mmproj)",
     "caption_llm_api_key": "NL Caption VLM API key (leave empty for local servers without auth)",
     "caption_llm_timeout": "NL Caption VLM per-image request timeout in seconds",
     "caption_llm_enable_thinking": "NL Caption VLM: enable thinking mode (hybrid models only; slower but can improve quality)",
