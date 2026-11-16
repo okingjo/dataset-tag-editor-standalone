@@ -10,6 +10,11 @@ captions side by side, and export the right caption format for every trainer.
 
 ![](pic/ss01.png)
 
+The UI follows the training-data workflow as four tabs:
+**1. Captioning** (load images → interrogate tags → generate NL captions) →
+**2. Tag Editor** (filter & edit tags) → **3. Export Multi** (combine into
+training-ready captions) → **Settings**.
+
 ## New features in this fork
 
 ### 1. Modern taggers: PixAI Tagger v1.0 + WD v3
@@ -50,7 +55,7 @@ uv pip uninstall onnxruntime && uv pip install onnxruntime-gpu
 
 ### 2. Natural-language captioning with an uncensored VLM
 
-The **NL & Multi Captions** tab generates descriptive natural-language
+The **Captioning** tab generates descriptive natural-language
 captions with any OpenAI-compatible **vision** server — Ollama, llama.cpp
 (`llama-server`) or vLLM. Built for NSFW datasets: point it at an
 uncensored/abliterated **Qwen3.5-35B-A3B** and captions are not refused
@@ -60,7 +65,22 @@ uncensored/abliterated **Qwen3.5-35B-A3B** and captions are not refused
   clean single-paragraph output; sampling follows Qwen3.5's official
   non-thinking settings (temp 0.7 / top_p 0.8 / top_k 20).
 - Results are saved as per-image sidecars `<img>.nl.txt`, reviewable and
-  editable in *Edit Caption of Selected Image → VLM NL Caption*.
+  editable in *Tag Editor → Edit Caption of Selected Image → VLM NL Caption*.
+- **Per-folder context (`nl_prompt.txt`)**: drop a text file named
+  `nl_prompt.txt` into any dataset folder to give the VLM authoritative
+  background for every image inside it — ideal for character LoRAs organized
+  by costume:
+
+  ```
+  dataset/miku/nl_prompt.txt                 All images show the character hatsune miku.
+  dataset/miku/school_uniform/nl_prompt.txt  She is wearing a sailor school uniform.
+  dataset/miku/swimsuit/nl_prompt.txt        She is wearing a blue one-piece swimsuit.
+  ```
+
+  With recursive loading the files are inherited from the dataset root down
+  to each image's folder (outer first), so the character folder states the
+  character once and each costume subfolder adds its own description. The
+  context is woven into every generated caption automatically.
 
 ### 3. One master caption set for every trainer: `.multi` export
 
@@ -75,9 +95,9 @@ img.nl.txt    <- natural-language caption (VLM-generated or hand-written)
 img.multi     <- derived candidates for kohya sd-scripts multi-caption training
 ```
 
-*Generate .multi* combines the edited `.txt` tags with the NL sidecars into
-complete candidates separated by `---===---` (sd-scripts samples one per
-training step):
+*Export Multi → Generate .multi* combines the edited `.txt` tags with the NL
+sidecars into complete candidates separated by `---===---` (sd-scripts
+samples one per training step):
 
 ```
 masterpiece, best quality, score_7, safe, 1girl, long hair, school uniform, classroom
@@ -208,17 +228,19 @@ preferred for explicit datasets. Test a few samples before batch-running.
 
 ## Basic usage
 
-1. **Load dataset** — point at your image folder; run interrogators (PixAI /
-   WD v3) if captions are missing. Captions in filenames can be loaded;
-   edited captions are saved as `.txt` (or kohya sd-scripts metadata JSON).
-2. **Filter** — *Filter by Tags* (AND/OR logic) or *Filter by Selection*
-   (manual pick, Enter to add). All batch edits apply **only to filtered
-   images**.
-3. **Edit** — *Batch Edit Captions*: append / replace / remove tags, sort,
-   regex search & replace, Smart Dedup. *Edit Caption of Selected Image*:
-   per-image editing, re-interrogate, VLM NL caption review.
-4. **NL & Multi Captions** — generate NL sidecars, then render `.multi`.
-5. **Save all changes**.
+1. **1. Captioning** — point at your image folder and Load; interrogators
+   (PixAI / WD v3) can tag on load. Then generate NL captions with the VLM
+   (per-folder `nl_prompt.txt` context applies automatically). Captions in
+   filenames can be loaded; edited captions are saved as `.txt` (or kohya
+   sd-scripts metadata JSON).
+2. **2. Tag Editor** — *Filter by Tags* (AND/OR logic) or *Filter by
+   Selection* (manual pick, Enter to add); all batch edits apply **only to
+   filtered images**. *Batch Edit Captions*: append / replace / remove tags,
+   sort, regex search & replace, Smart Dedup. *Edit Caption of Selected
+   Image*: per-image editing, re-interrogate, VLM NL caption review.
+3. **3. Export Multi** — render `.multi` candidates from the edited tags +
+   NL sidecars.
+4. **Save all changes** (top bar, available on every tab).
 
 ## Troubleshooting
 

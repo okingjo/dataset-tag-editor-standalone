@@ -211,10 +211,9 @@ def create_ui():
     reload_javascript()
 
     with gr.Blocks(analytics_enabled=False, title="Dataset Tag Editor") as gui:
-        with gr.Tab("Main"):
-            tab_main.on_ui_tabs()
-        with gr.Tab("Settings"):
-            tab_settings.on_ui_tabs()
+        # tab_main builds the workflow tabs: 1. Captioning / 2. Tag Editor /
+        # 3. Export Multi / Settings
+        tab_main.on_ui_tabs()
 
         gr.Textbox(elem_id="ui_created", value="", visible=False)
 

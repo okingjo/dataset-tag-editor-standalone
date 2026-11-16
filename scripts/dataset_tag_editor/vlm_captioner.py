@@ -33,6 +33,41 @@ DEFAULT_PROMPT = (
     "them against the image."
 )
 
+# Per-folder context: drop a `nl_prompt.txt` into any dataset folder to give
+# the VLM extra instructions for every image inside it (e.g. "All images in
+# this folder show <character> wearing <costume>."). When a root_dir is given,
+# files are collected from the root down to the image's own folder and
+# concatenated outer-first, so a character folder can state the character
+# name while each costume subfolder adds the costume.
+FOLDER_PROMPT_FILENAME = "nl_prompt.txt"
+
+
+def read_folder_context(img_path: str | Path, root_dir: str | Path | None = None) -> str:
+    """Collect nl_prompt.txt contents from root_dir down to the image folder."""
+    d = Path(img_path).resolve().parent
+    chain: list[Path] = []
+    if root_dir:
+        r = Path(root_dir).resolve()
+        cur = d
+        while cur == r or r in cur.parents:
+            chain.append(cur)
+            if cur == r:
+                break
+            cur = cur.parent
+    if not chain:
+        chain = [d]
+    parts: list[str] = []
+    for folder in reversed(chain):  # outermost first
+        f = folder / FOLDER_PROMPT_FILENAME
+        if f.is_file():
+            try:
+                txt = f.read_text(encoding="utf-8").strip()
+            except OSError:
+                txt = ""
+            if txt:
+                parts.append(txt)
+    return "\n".join(parts)
+
 
 def encode_image_data_uri(img_path: str | Path, max_side: int = 1024) -> str:
     """Downscale to max_side and encode as a JPEG data URI (RGB, no alpha)."""
@@ -58,12 +93,18 @@ def build_payload(
     prompt: str = "",
     system_prompt: str = "",
     tags_hint: list[str] | None = None,
+    folder_context: str = "",
     enable_thinking: bool = False,
     max_tokens: int = 2048,
     temperature: float = 0.7,
     image_max_side: int = 1024,
 ) -> dict:
     user_text = (prompt or DEFAULT_PROMPT).strip()
+    if folder_context:
+        user_text += (
+            "\n\nFolder context (authoritative background for this image, weave "
+            "it into the caption naturally): " + folder_context.strip()
+        )
     if tags_hint:
         user_text += "\n\nExisting tags: " + ", ".join(t for t in tags_hint if t)
     return {
@@ -119,6 +160,7 @@ def caption_image(
     prompt: str = "",
     system_prompt: str = "",
     tags_hint: list[str] | None = None,
+    folder_context: str = "",
     enable_thinking: bool = False,
     timeout: float = 300.0,
     max_tokens: int = 2048,
@@ -142,6 +184,7 @@ def caption_image(
         prompt=prompt,
         system_prompt=system_prompt,
         tags_hint=tags_hint,
+        folder_context=folder_context,
         enable_thinking=enable_thinking,
         max_tokens=max_tokens,
         temperature=temperature,
@@ -170,16 +213,20 @@ def caption_images(
     skip_existing: bool = True,
     tags_hint_getter=None,
     progress_cb=None,
+    root_dir: str | Path | None = None,
     **options,
 ):
     """Batch generator: yields (img_path, status, text).
 
     status: 'ok' | 'skipped' | 'error'. Writes <img>.nl.txt on success.
     progress_cb(done, total, path) is called after each image if given.
+    root_dir enables per-folder nl_prompt.txt context (collected from the
+    root down to each image's folder, cached per folder).
     """
     from . import multi_caption as mc
 
     total = len(img_paths)
+    ctx_cache: dict[Path, str] = {}
     for i, path in enumerate(img_paths):
         text = ""
         if skip_existing and mc.nl_sidecar_path(path).is_file():
@@ -187,7 +234,12 @@ def caption_images(
         else:
             try:
                 hint = tags_hint_getter(path) if tags_hint_getter else None
-                text = caption_image(path, tags_hint=hint, **options)
+                d = Path(path).resolve().parent
+                if d not in ctx_cache:
+                    ctx_cache[d] = read_folder_context(path, root_dir)
+                text = caption_image(
+                    path, tags_hint=hint, folder_context=ctx_cache[d], **options
+                )
                 mc.write_nl(path, text)
                 status = "ok"
             except Exception as e:

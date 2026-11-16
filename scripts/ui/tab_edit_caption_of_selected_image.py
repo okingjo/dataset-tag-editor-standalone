@@ -76,8 +76,8 @@ class EditCaptionOfSelectedImageUI(UIBase):
         with gr.Tab(label="VLM NL Caption"):
             gr.Markdown(
                 "Natural-language caption stored in `<img>.nl.txt`. Generate with "
-                "the VLM configured in Settings (NL Caption VLM), or edit by hand. "
-                "Used by the *NL & Multi Captions* tab to build `.multi` candidates."
+                "the VLM configured in the *Captioning* tab (or Settings), or edit "
+                "by hand. Used by the *Export Multi* tab to build `.multi` candidates."
             )
             self.tb_nl_caption = gr.Textbox(
                 label="Natural-language caption (.nl.txt)",
@@ -298,6 +298,9 @@ class EditCaptionOfSelectedImageUI(UIBase):
                     api_key=settings.current.caption_llm_api_key,
                     prompt=settings.current.caption_llm_prompt,
                     system_prompt=settings.current.caption_llm_system_prompt,
+                    folder_context=vlm.read_folder_context(
+                        path, load_dataset.tb_img_directory.value or None
+                    ),
                     enable_thinking=settings.current.caption_llm_enable_thinking,
                     timeout=settings.current.caption_llm_timeout,
                     max_tokens=settings.current.caption_llm_max_tokens,
