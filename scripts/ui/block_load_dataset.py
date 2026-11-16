@@ -61,19 +61,18 @@ class LoadDatasetUI(UIBase):
                             value=cfg_general.replace_new_line,
                             label="Replace new-line character with comma",
                         )
-                    with gr.Column():
-                        self.rb_use_interrogator = gr.Radio(
-                            choices=[
-                                "No",
-                                "If Empty",
-                                "Overwrite",
-                                "Prepend",
-                                "Append",
-                            ],
-                            value=cfg_general.use_interrogator,
-                            label="Use Interrogator Caption",
-                        )
             with gr.Accordion(label="Interrogator", open=False):
+                self.rb_use_interrogator = gr.Radio(
+                    choices=[
+                        "No",
+                        "If Empty",
+                        "Overwrite",
+                        "Prepend",
+                        "Append",
+                    ],
+                    value=cfg_general.use_interrogator,
+                    label="Use Interrogator Caption",
+                )
                 self.dd_intterogator_names = gr.Dropdown(
                     label="Interrogators",
                     choices=dte_instance.INTERROGATOR_NAMES,
@@ -82,10 +81,12 @@ class LoadDatasetUI(UIBase):
                     multiselect=True,
                 )
                 gr.Markdown(
-                    "Tag the **currently filtered images** with the selected "
-                    "interrogators. Merge method comes from *Use Interrogator "
-                    "Caption* in Dataset Load Settings (If Empty / Overwrite / "
-                    "Prepend / Append)."
+                    "Loading a dataset only loads images and existing captions "
+                    "— it never tags automatically. Pick a merge method (*Use "
+                    "Interrogator Caption*) and interrogators, then **Start "
+                    "tagging** tags the currently filtered images: If Empty = "
+                    "only untagged, Overwrite = replace all, Prepend / Append "
+                    "= add before / after existing tags."
                 )
                 with gr.Row():
                     self.btn_interrogate = gr.Button(
@@ -144,40 +145,23 @@ class LoadDatasetUI(UIBase):
             recursive: bool,
             load_caption_from_filename: bool,
             replace_new_line: bool,
-            use_interrogator: str,
-            use_interrogator_names: list[str],
-            use_custom_threshold_waifu: bool,
-            custom_threshold_waifu: float,
-            custom_threshold_z3d: float,
-            custom_threshold_pixai: float,
             use_kohya_metadata: bool,
             kohya_json_path: str,
         ):
-            interrogate_method = dte_instance.InterrogateMethod.NONE
-            if use_interrogator == "If Empty":
-                interrogate_method = dte_instance.InterrogateMethod.PREFILL
-            elif use_interrogator == "Overwrite":
-                interrogate_method = dte_instance.InterrogateMethod.OVERWRITE
-            elif use_interrogator == "Prepend":
-                interrogate_method = dte_instance.InterrogateMethod.PREPEND
-            elif use_interrogator == "Append":
-                interrogate_method = dte_instance.InterrogateMethod.APPEND
-
-            threshold_waifu = custom_threshold_waifu if use_custom_threshold_waifu else -1
-            threshold_z3d = custom_threshold_z3d
-            threshold_pixai = custom_threshold_pixai
-
+            # Load is pure loading: images + existing captions only. Tagging
+            # happens exclusively via Start tagging (Interrogator panel),
+            # which applies the Use Interrogator Caption merge method.
             dte_instance.load_dataset(
                 dir,
                 caption_file_ext,
                 recursive,
                 load_caption_from_filename,
                 replace_new_line,
-                interrogate_method,
-                use_interrogator_names,
-                threshold_waifu,
-                threshold_z3d,
-                threshold_pixai,
+                dte_instance.InterrogateMethod.NONE,
+                [],
+                -1,
+                0,
+                0,
                 settings.current.use_temp_files,
                 kohya_json_path if use_kohya_metadata else None,
                 settings.current.max_resolution
@@ -213,12 +197,6 @@ class LoadDatasetUI(UIBase):
                 self.cb_load_recursive,
                 self.cb_load_caption_from_filename,
                 self.cb_replace_new_line_with_comma,
-                self.rb_use_interrogator,
-                self.dd_intterogator_names,
-                self.cb_use_custom_threshold_waifu,
-                self.sl_custom_threshold_waifu,
-                self.sl_custom_threshold_z3d,
-                self.sl_custom_threshold_pixai,
                 toprow.cb_save_kohya_metadata,
                 toprow.tb_metadata_output,
             ],
@@ -271,7 +249,7 @@ class LoadDatasetUI(UIBase):
             elif use_interrogator == "Append":
                 interrogate_method = dte_instance.InterrogateMethod.APPEND
             if interrogate_method == dte_instance.InterrogateMethod.NONE:
-                return 'Set "Use Interrogator Caption" (Dataset Load Settings) to a method other than No.'
+                return 'Set "Use Interrogator Caption" (above) to a method other than No.'
             if not use_interrogator_names:
                 return "Select at least one interrogator."
             paths = dte_instance.get_filtered_imgpaths(filters=get_filters())
