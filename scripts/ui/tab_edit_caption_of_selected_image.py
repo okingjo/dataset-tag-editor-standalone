@@ -2,8 +2,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 import gradio as gr
 
+import settings
 from dte_instance import dte_module
 from utilities import wrap_queued_call
+from dataset_tag_editor import multi_caption as mc
+from dataset_tag_editor import vlm_captioner as vlm
 
 from .ui_common import *
 from .uibase import UIBase
@@ -70,6 +73,23 @@ class EditCaptionOfSelectedImageUI(UIBase):
                 self.btn_copy_interrogate = gr.Button(value="Copy and Overwrite")
                 self.btn_prepend_interrogate = gr.Button(value="Prepend")
                 self.btn_append_interrogate = gr.Button(value="Append")
+        with gr.Tab(label="VLM NL Caption"):
+            gr.Markdown(
+                "Natural-language caption stored in `<img>.nl.txt`. Generate with "
+                "the VLM configured in Settings (NL Caption VLM), or edit by hand. "
+                "Used by the *NL & Multi Captions* tab to build `.multi` candidates."
+            )
+            self.tb_nl_caption = gr.Textbox(
+                label="Natural-language caption (.nl.txt)",
+                interactive=True,
+                lines=6,
+            )
+            with gr.Row():
+                self.btn_generate_nl_si = gr.Button(
+                    value="Generate with VLM", variant="primary"
+                )
+                self.btn_save_nl_si = gr.Button(value="Save .nl.txt", variant="primary")
+            self.tb_nl_status_si = gr.Textbox(label="Status", interactive=False)
         with gr.Column():
             self.cb_copy_caption_automatically = gr.Checkbox(
                 value=cfg_edit_selected.auto_copy,
@@ -151,10 +171,12 @@ class EditCaptionOfSelectedImageUI(UIBase):
                 self.prev_idx = -1
 
             next_tags_txt = ""
+            next_nl_txt = ""
             if 0 <= self.current_idx and self.current_idx < len(img_paths):
                 next_tags_txt = ", ".join(
                     dte_instance.get_tags_by_image_path(img_paths[self.current_idx])
                 )
+                next_nl_txt = mc.read_nl(img_paths[self.current_idx])
 
             return \
                 [
@@ -165,7 +187,8 @@ class EditCaptionOfSelectedImageUI(UIBase):
                     else -1
                 ]\
                 + [next_tags_txt, next_tags_txt if copy_automatically else edit_caption]\
-                + [edit_caption]
+                + [edit_caption]\
+                + [next_nl_txt]
 
         self.nb_hidden_image_index_save_or_not.change(
             fn=lambda a: None,
@@ -181,7 +204,8 @@ class EditCaptionOfSelectedImageUI(UIBase):
             ],
             outputs=[self.nb_hidden_image_index_save_or_not]
             + [self.tb_caption, self.tb_edit_caption]
-            + [self.tb_hidden_edit_caption],
+            + [self.tb_hidden_edit_caption]
+            + [self.tb_nl_caption],
         )
 
         def change_selected_image_caption(
@@ -234,21 +258,16 @@ class EditCaptionOfSelectedImageUI(UIBase):
 
         def interrogate_selected_image(
             interrogator_name: str,
-            threshold_booru: float,
             use_threshold_waifu: bool,
             threshold_waifu: float,
             threshold_z3d: float,
         ):
             if not interrogator_name:
                 return ""
-            threshold_booru = (
-                threshold_booru
-            )
             threshold_waifu = threshold_waifu if use_threshold_waifu else -1
             return dte_instance.interrogate_image(
                 dataset_gallery.selected_path,
                 interrogator_name,
-                threshold_booru,
                 threshold_waifu,
                 threshold_z3d,
             )
@@ -257,12 +276,52 @@ class EditCaptionOfSelectedImageUI(UIBase):
             fn=interrogate_selected_image,
             inputs=[
                 self.dd_intterogator_names_si,
-                load_dataset.sl_custom_threshold_booru,
                 load_dataset.cb_use_custom_threshold_waifu,
                 load_dataset.sl_custom_threshold_waifu,
                 load_dataset.sl_custom_threshold_z3d,
             ],
             outputs=[self.tb_interrogate],
+        )
+
+        def generate_nl_selected_image(current_nl: str):
+            path = dataset_gallery.selected_path
+            if not path:
+                return current_nl, "Select an image first."
+            try:
+                text = vlm.caption_image(
+                    path,
+                    base_url=settings.current.caption_llm_base_url,
+                    model=settings.current.caption_llm_model,
+                    api_key=settings.current.caption_llm_api_key,
+                    prompt=settings.current.caption_llm_prompt,
+                    system_prompt=settings.current.caption_llm_system_prompt,
+                    enable_thinking=settings.current.caption_llm_enable_thinking,
+                    timeout=settings.current.caption_llm_timeout,
+                    max_tokens=settings.current.caption_llm_max_tokens,
+                    image_max_side=settings.current.caption_llm_image_size,
+                )
+            except Exception as e:
+                return current_nl, f"Error: {e}"
+            mc.write_nl(path, text)
+            return text, f"Generated and saved to {mc.nl_sidecar_path(path)}"
+
+        self.btn_generate_nl_si.click(
+            fn=generate_nl_selected_image,
+            inputs=[self.tb_nl_caption],
+            outputs=[self.tb_nl_caption, self.tb_nl_status_si],
+        )
+
+        def save_nl_selected_image(text: str):
+            path = dataset_gallery.selected_path
+            if not path:
+                return "Select an image first."
+            mc.write_nl(path, text)
+            return f"Saved to {mc.nl_sidecar_path(path)}"
+
+        self.btn_save_nl_si.click(
+            fn=save_nl_selected_image,
+            inputs=[self.tb_nl_caption],
+            outputs=[self.tb_nl_status_si],
         )
 
         self.btn_copy_interrogate.click(

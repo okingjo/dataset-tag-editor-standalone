@@ -9,6 +9,7 @@ from .tab_filter_by_selection import FilterBySelectionUI
 from .tab_batch_edit_captions import BatchEditCaptionsUI
 from .tab_edit_caption_of_selected_image import EditCaptionOfSelectedImageUI
 from .tab_move_or_delete_files import MoveOrDeleteFilesUI
+from .tab_nl_multi_captions import NlMultiCaptionsUI
 
 __all__ = [
     "ToprowUI",
@@ -22,4 +23,5 @@ __all__ = [
     "BatchEditCaptionsUI",
     "EditCaptionOfSelectedImageUI",
     "MoveOrDeleteFilesUI",
+    "NlMultiCaptionsUI",
 ]

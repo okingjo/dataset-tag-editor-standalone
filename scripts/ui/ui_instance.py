@@ -10,6 +10,7 @@ __all__ = [
     "batch_edit_captions",
     "edit_caption_of_selected_image",
     "move_or_delete_files",
+    "nl_multi_captions",
 ]
 
 toprow = ToprowUI()
@@ -21,3 +22,4 @@ filter_by_selection = FilterBySelectionUI()
 batch_edit_captions = BatchEditCaptionsUI()
 edit_caption_of_selected_image = EditCaptionOfSelectedImageUI()
 move_or_delete_files = MoveOrDeleteFilesUI()
+nl_multi_captions = NlMultiCaptionsUI()

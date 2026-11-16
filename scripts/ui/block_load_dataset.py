@@ -66,15 +66,6 @@ class LoadDatasetUI(UIBase):
                         )
             with gr.Accordion(label="Interrogator Settings", open=False):
                 with gr.Row():
-                    self.sl_custom_threshold_booru = gr.Slider(
-                        minimum=0,
-                        maximum=1,
-                        value=cfg_general.custom_threshold_booru,
-                        step=0.01,
-                        interactive=True,
-                        label="Booru Score Threshold",
-                    )
-                with gr.Row():
                     self.sl_custom_threshold_z3d = gr.Slider(
                         minimum=0,
                         maximum=1,
@@ -86,7 +77,7 @@ class LoadDatasetUI(UIBase):
                 with gr.Row():
                     self.cb_use_custom_threshold_waifu = gr.Checkbox(
                         value=cfg_general.use_custom_threshold_waifu,
-                        label="Use Custom Threshold (WDv1.4 Tagger)",
+                        label="Use Custom Threshold (WD Tagger)",
                         interactive=True,
                     )
                     self.sl_custom_threshold_waifu = gr.Slider(
@@ -95,7 +86,7 @@ class LoadDatasetUI(UIBase):
                         value=cfg_general.custom_threshold_waifu,
                         step=0.01,
                         interactive=True,
-                        label="WDv1.4 Tagger Score Threshold",
+                        label="WD Tagger Score Threshold",
                     )
 
     def set_callbacks(
@@ -116,7 +107,6 @@ class LoadDatasetUI(UIBase):
             replace_new_line: bool,
             use_interrogator: str,
             use_interrogator_names: list[str],
-            custom_threshold_booru: float,
             use_custom_threshold_waifu: bool,
             custom_threshold_waifu: float,
             custom_threshold_z3d: float,
@@ -133,7 +123,6 @@ class LoadDatasetUI(UIBase):
             elif use_interrogator == "Append":
                 interrogate_method = dte_instance.InterrogateMethod.APPEND
 
-            threshold_booru = custom_threshold_booru
             threshold_waifu = custom_threshold_waifu if use_custom_threshold_waifu else -1
             threshold_z3d = custom_threshold_z3d
 
@@ -145,7 +134,6 @@ class LoadDatasetUI(UIBase):
                 replace_new_line,
                 interrogate_method,
                 use_interrogator_names,
-                threshold_booru,
                 threshold_waifu,
                 threshold_z3d,
                 settings.current.use_temp_files,
@@ -185,7 +173,6 @@ class LoadDatasetUI(UIBase):
                 self.cb_replace_new_line_with_comma,
                 self.rb_use_interrogator,
                 self.dd_intterogator_names,
-                self.sl_custom_threshold_booru,
                 self.cb_use_custom_threshold_waifu,
                 self.sl_custom_threshold_waifu,
                 self.sl_custom_threshold_z3d,

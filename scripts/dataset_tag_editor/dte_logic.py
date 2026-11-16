@@ -23,7 +23,7 @@ from . import (
     taggers_builtin
 )
 from .custom_scripts import CustomScripts
-from .interrigator_names import BLIP2_CAPTIONING_NAMES, WD_TAGGERS, WD_TAGGERS_TIMM
+from .interrigator_names import WD_TAGGERS, WD_TAGGERS_TIMM
 from scripts.tokenizer import clip_tokenizer
 from scripts.tagger import Tagger
 from cmd_args import opts
@@ -138,11 +138,7 @@ class DatasetTagEditor(Singleton):
                 return settings.current.batch_size_eva02_large
 
         self.INTERROGATORS = (
-            [taggers_builtin.BLIP()]
-            + [taggers_builtin.BLIP2(name) for name in BLIP2_CAPTIONING_NAMES]
-            + [taggers_builtin.GITLarge()]
-            + [taggers_builtin.DeepDanbooru(settings.current.tagger_use_rating)]
-            + [
+            [
                 taggers_builtin.WaifuDiffusion(name, threshold, settings.current.tagger_use_rating)
                 for name, threshold in WD_TAGGERS.items()
             ]
@@ -155,7 +151,7 @@ class DatasetTagEditor(Singleton):
         )
         self.INTERROGATOR_NAMES = [it.name() for it in self.INTERROGATORS]
     
-    def interrogate_image(self, path: str, interrogator_name: str, threshold_booru, threshold_wd, threshold_z3d):
+    def interrogate_image(self, path: str, interrogator_name: str, threshold_wd, threshold_z3d):
         try:
             img = Image.open(path)
             img = get_square_rgb(img)
@@ -164,10 +160,7 @@ class DatasetTagEditor(Singleton):
         else:
             for it in self.INTERROGATORS:
                 if it.name() == interrogator_name:
-                    if isinstance(it, taggers_builtin.DeepDanbooru):
-                        with it as tg:
-                            res = tg.predict(img, threshold_booru)
-                    elif isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
+                    if isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
                         with it as tg:
                             res = tg.predict(img, threshold_wd)
                     elif isinstance(it, taggers_builtin.Z3D_E621):
@@ -834,7 +827,6 @@ class DatasetTagEditor(Singleton):
         replace_new_line: bool,
         interrogate_method: InterrogateMethod,
         interrogator_names: list[str],
-        threshold_booru: float,
         threshold_waifu: float,
         threshold_z3d: float,
         use_temp_dir: bool,
@@ -968,9 +960,7 @@ class DatasetTagEditor(Singleton):
         if interrogate_method != self.InterrogateMethod.NONE:
             for it in self.INTERROGATORS:
                 if it.name() in interrogator_names:
-                    if isinstance(it, taggers_builtin.DeepDanbooru):
-                        tagger_thresholds.append((it, threshold_booru))
-                    elif isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
+                    if isinstance(it, taggers_builtin.WaifuDiffusion) or isinstance(it, taggers_builtin.WaifuDiffusionTimm):
                         tagger_thresholds.append((it, threshold_waifu))
                     elif isinstance(it, taggers_builtin.Z3D_E621):
                         tagger_thresholds.append((it, threshold_z3d))

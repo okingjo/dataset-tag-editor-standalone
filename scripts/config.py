@@ -21,7 +21,6 @@ GeneralConfig = namedtuple(
         "replace_new_line",
         "use_interrogator",
         "use_interrogator_names",
-        "custom_threshold_booru",
         "use_custom_threshold_waifu",
         "custom_threshold_waifu",
         "custom_threshold_z3d",
@@ -68,6 +67,20 @@ EditSelectedConfig = namedtuple(
 MoveDeleteConfig = namedtuple(
     "MoveDeleteConfig", ["range", "target", "caption_ext", "destination"]
 )
+NlMultiConfig = namedtuple(
+    "NlMultiConfig",
+    [
+        "tag_source",
+        "candidates",
+        "tag_style",
+        "quality_prefix",
+        "prefix_nl",
+        "overwrite_multi",
+        "multi_ext",
+        "skip_existing_nl",
+        "tags_hint",
+    ],
+)
 
 CFG_GENERAL_DEFAULT = GeneralConfig(
     True,
@@ -78,7 +91,6 @@ CFG_GENERAL_DEFAULT = GeneralConfig(
     False,
     "No",
     [],
-    0.7,
     False,
     0.35,
     0.35,
@@ -113,6 +125,17 @@ CFG_EDIT_SELECTED_DEFAULT = EditSelectedConfig(
     False, False, False, "", SortBy.ALPHA.value, SortOrder.ASC.value
 )
 CFG_MOVE_DELETE_DEFAULT = MoveDeleteConfig("Selected One", [], ".txt", "")
+CFG_NL_MULTI_DEFAULT = NlMultiConfig(
+    "Saved .txt files",
+    ["tags only", "tags + NL (hybrid)", "NL only"],
+    "spaces (Anima/MOSS)",
+    "masterpiece, best quality, score_7, safe",
+    False,
+    True,
+    ".multi",
+    True,
+    True,
+)
 
 
 class Config:

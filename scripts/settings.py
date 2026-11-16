@@ -16,7 +16,6 @@ class Settings(NamedTuple):
     tagger_use_spaces: bool = True
     interrogator_use_cpu: bool = False
     interrogator_keep_in_memory: bool = False
-    interrogator_max_length: int = 30
     interrogator_model_dir: str = ""
     tagger_use_rating: bool = False
     num_cpu_worker: int = -1
@@ -40,6 +39,17 @@ class Settings(NamedTuple):
     batch_size_convnext:int = 4
     batch_size_swinv2:int = 4
     batch_size_eva02_large:int = 4
+    # Natural-language captioning via an OpenAI-compatible VLM server
+    # (Ollama / llama.cpp / vLLM), e.g. an uncensored Qwen3.5-35B-A3B.
+    caption_llm_base_url: str = "http://127.0.0.1:11434/v1"
+    caption_llm_model: str = "qwen3.5-35b-a3b-uncensored"
+    caption_llm_api_key: str = ""
+    caption_llm_timeout: float = 300.0
+    caption_llm_enable_thinking: bool = False
+    caption_llm_max_tokens: int = 2048
+    caption_llm_image_size: int = 1024
+    caption_llm_prompt: str = ""
+    caption_llm_system_prompt: str = ""
 
 
 DEFAULT = Settings()
@@ -60,7 +70,6 @@ DESCRIPTIONS = {
     "tagger_use_spaces": "Replace underbar (_) in tags with whitespace ( )",
     "interrogator_use_cpu": "Use CPU to interrogate",
     "interrogator_keep_in_memory": "Keep interroagor in VRAM",
-    "interrogator_max_length": "Maximum text length for interrogator (for GIT only)",
     "interrogator_model_dir": "Path to directory for downloaded interrogator models",
     "tagger_use_rating": "Use Rating tags when using Tagger",
     "num_cpu_worker": "Number of CPU workers when loading or preprocessing images (set -1 to auto)",
@@ -81,6 +90,15 @@ DESCRIPTIONS = {
     "batch_size_convnext": "Inference batch size for ConvNeXt taggers",
     "batch_size_swinv2": "Inference batch size for SwinV2 taggers",
     "batch_size_eva02_large": "Inference batch size for EVA-02 large taggers",
+    "caption_llm_base_url": "NL Caption VLM base URL (OpenAI-compatible), e.g. http://127.0.0.1:11434/v1 (Ollama) or http://127.0.0.1:8080 (llama.cpp)",
+    "caption_llm_model": "NL Caption VLM model name, e.g. an uncensored Qwen3.5-35B-A3B vision model served by Ollama/vLLM",
+    "caption_llm_api_key": "NL Caption VLM API key (leave empty for local servers without auth)",
+    "caption_llm_timeout": "NL Caption VLM per-image request timeout in seconds",
+    "caption_llm_enable_thinking": "NL Caption VLM: enable thinking mode (hybrid models only; slower but can improve quality)",
+    "caption_llm_max_tokens": "NL Caption VLM: maximum tokens per caption",
+    "caption_llm_image_size": "NL Caption VLM: longest image side sent to the server (px)",
+    "caption_llm_prompt": "NL Caption VLM: custom user prompt (empty = built-in anime captioning prompt)",
+    "caption_llm_system_prompt": "NL Caption VLM: custom system prompt (empty = built-in uncensored captioner prompt)",
 }
 
 
