@@ -281,6 +281,17 @@ Uncensored options that keep vision working:
   `huihui_ai/qwen3.5-abliterated:35b-a3b-q8_0` (~39 GB). Then set
   *NL Caption VLM base URL* to `http://<host>:11434/v1` and model to
   `huihui_ai/qwen3.5-abliterated:35b` (the app default).
+  Higher-quality custom import (Q6_K/Q8_0, auto-split across GPUs; the two
+  `FROM` lines load model + vision projector):
+  ```bash
+  hf download mradermacher/Huihui-Qwen3.5-35B-A3B-abliterated-GGUF \
+    Huihui-Qwen3.5-35B-A3B-abliterated.Q6_K.gguf \
+    Huihui-Qwen3.5-35B-A3B-abliterated.mmproj-f16.gguf --local-dir ./q35
+  printf 'FROM ./q35/Huihui-Qwen3.5-35B-A3B-abliterated.Q6_K.gguf\nFROM ./q35/Huihui-Qwen3.5-35B-A3B-abliterated.mmproj-f16.gguf\nPARAMETER num_ctx 32768\n' > Modelfile
+  ollama create qwen3.5-35b-abliterated -f Modelfile
+  ```
+  The long silent "gathering model components" phase is SHA-256 hashing of
+  20–30 GB, not a hang.
 - **llama.cpp (best community reputation for NSFW captioning):**
   `HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive` GGUF — download the
   main quant **and** the `mmproj-…-f16.gguf` vision projector (required for
@@ -289,6 +300,11 @@ Uncensored options that keep vision working:
   and point the app at `http://<host>:8080/v1` with the model name you passed
   (or the default alias). Q4_K_M ≈ 21 GB + 0.9 GB mmproj fits a 24 GB GPU;
   Q8_0 ≈ 37 GB suits 48 GB+ or unified-memory boxes.
+  Shortcut on recent llama.cpp builds (auto-downloads the matching mmproj):
+  `llama-server -hf HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K --jinja -c 8192 --port 8080`
+  (or `-hf mradermacher/Huihui-Qwen3.5-35B-A3B-abliterated-GGUF:Q8_0`). If image
+  requests still 500 with "image input is not supported", pass `--mmproj`
+  explicitly. Needs a build with qwen3_5_moe / Gated-DeltaNet support.
 - vLLM: serve `huihui-ai/Huihui-Qwen3.5-35B-A3B-abliterated` (BF16, ~67 GB).
 
 Notes:
@@ -296,7 +312,8 @@ Notes:
 - Keep **thinking mode off** for batch captioning (the app default) — cleaner
   single-paragraph output; enable it in Settings if you want deeper reasoning.
 - Avoid temperature 0 with quantized Qwen3-family models (repetition loops);
-  the app uses 0.7 by default.
+  the app sends Qwen3.5's official non-thinking sampling: temp 0.7, top_p 0.8,
+  top_k 20.
 - Abliteration removes refusals, but community reports say the huihui build's
   NSFW *visual vocabulary* can be shallow; the HauhauCS Aggressive build is
   preferred for explicit datasets. Test a few samples before batch-running.

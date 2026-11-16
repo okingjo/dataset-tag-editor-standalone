@@ -79,6 +79,11 @@ def build_payload(
             },
         ],
         "temperature": temperature,
+        # Qwen3.5 official non-thinking sampling: temp 0.7 / top_p 0.8 / top_k 20.
+        # Ollama, llama.cpp and vLLM all accept top_k in the request body;
+        # servers that don't know it ignore the field.
+        "top_p": 0.8,
+        "top_k": 20,
         "max_tokens": max_tokens,
         # Hybrid reasoning models (Qwen3/Qwen3.5): thinking improves caption
         # quality but is slow; make it explicit. Ollama reads "think", HF-style
