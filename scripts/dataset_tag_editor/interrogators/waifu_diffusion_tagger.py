@@ -26,8 +26,8 @@ class WaifuDiffusionTagger:
                 providers = ["CPUExecutionProvider"]
             else:
                 providers = [
-                    "CUDAExecutionProvider",
-                    "DmlExecutionProvider",
+                    ("CUDAExecutionProvider", {}),
+                    ("DmlExecutionProvider", {"device_id": devices.get_dml_device_id()}),
                     "CPUExecutionProvider",
                 ]
 

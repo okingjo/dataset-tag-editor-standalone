@@ -24,7 +24,13 @@ dependencies = [
     # Used lazily by the WD tagger; declared here so it is pre-installed and the
     # app never needs to pip-install anything at runtime.
     "pandas>=2.2,<3",
-    "onnxruntime>=1.17,<2",
+    # ONNX Runtime: DirectML on Windows (any DX12 GPU; transparently falls back
+    # to CPU when no GPU/driver is available), plain CPU wheel elsewhere. Both
+    # packages ship the same `onnxruntime` module — the platform markers keep
+    # them mutually exclusive so `uv run` / `uv sync` never overwrites the GPU
+    # build with the CPU one (which silently forced CPU tagging before).
+    "onnxruntime-directml>=1.20,<2; sys_platform == 'win32'",
+    "onnxruntime>=1.17,<2; sys_platform != 'win32'",
 ]
 
 [tool.uv]

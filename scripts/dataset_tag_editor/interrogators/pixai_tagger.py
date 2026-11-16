@@ -84,7 +84,7 @@ class PixAITagger:
                 model_filename = "model_fp16.onnx"
                 providers = [
                     ("CUDAExecutionProvider", {}),
-                    ("DmlExecutionProvider", {"device_id": 0}),
+                    ("DmlExecutionProvider", {"device_id": devices.get_dml_device_id()}),
                     "CPUExecutionProvider",
                 ]
             path_model = huggingface_hub.hf_hub_download(

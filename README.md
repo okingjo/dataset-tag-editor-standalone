@@ -40,18 +40,30 @@ removed. What remains is the current state of the art:
 - Custom taggers can be added in `userscripts/taggers` (aesthetic score
   predictors are included).
 
-**GPU acceleration:** the default `onnxruntime` wheel is CPU-only (~11 s/image
-for PixAI). Swap the package and the taggers automatically prefer CUDA /
-DirectML:
+**GPU acceleration (ONNX taggers — WD / PixAI):** on Windows,
+`onnxruntime-directml` is installed **by default** (`pyproject.toml`), so any
+DX12 GPU (NVIDIA / AMD / Intel) is used automatically — no manual steps after
+cloning. The taggers auto-select the discrete GPU via DXGI enumeration (mixed
+iGPU + dGPU machines are handled) and fall back to CPU when no GPU/driver is
+available. Measured: PixAI fp16 on an RTX 5090 Laptop ≈ **0.23 s/image** vs
+≈ 11 s/image on CPU.
 
-```sh
-# Windows (any DX12 GPU)
-uv pip uninstall onnxruntime && uv pip install onnxruntime-directml
-# Linux + CUDA
-uv pip uninstall onnxruntime && uv pip install onnxruntime-gpu
-```
-
-(`uv sync` restores the CPU wheel from `pyproject.toml` — re-apply after syncing.)
+- Force CPU: *Settings → Use CPU to interrogate*.
+- The console prints `Running ONNX on CPU-DML` when DirectML is active
+  (`CPU` means CPU fallback).
+- **Linux + CUDA:** the non-Windows default is the CPU wheel; swap manually:
+  ```sh
+  uv pip uninstall onnxruntime && uv pip install onnxruntime-gpu
+  ```
+  `uv sync` / `uv run` restores the CPU wheel from `pyproject.toml` — re-apply
+  after syncing, or launch with `UV_NO_SYNC=1`.
+- **Troubleshooting:** if a GPU machine prints `Running ONNX on CPU`, check
+  `uv run python -c "import onnxruntime as ort; print(ort.get_available_providers())"`
+  — `DmlExecutionProvider` must be listed. Never install plain `onnxruntime`
+  alongside `onnxruntime-directml`: both ship the same `onnxruntime` module
+  and overwrite each other's files (this silently forced CPU tagging before
+  the platform-split fix). If the module looks broken after removing one of
+  them, run `uv sync --reinstall-package onnxruntime-directml`.
 
 ### 2. Natural-language captioning with an uncensored VLM
 
@@ -163,13 +175,18 @@ cd dataset-tag-editor-standalone
 - **Linux / macOS:** `./webui_uv.sh`
 
 First run creates `.venv/` and installs the pinned dependencies automatically
-(CPU-only PyTorch by default — lightweight, works everywhere). For NVIDIA GPU
-PyTorch:
+(CPU-only PyTorch by default — lightweight, works everywhere; ONNX taggers
+still use the GPU via DirectML on Windows). For NVIDIA GPU PyTorch (timm /
+BLIP interrogators):
 
 ```sh
-uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# RTX 20/30/40: cu121 works; RTX 50 (Blackwell) needs cu128 or newer
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 uv run --no-sync scripts/launch.py   # --no-sync keeps the CUDA build
 ```
+
+On Windows, `launch_uv_gpu.bat` is the same launcher with `UV_NO_SYNC=1`
+preset, so a manually installed CUDA build survives double-click launches.
 
 Google Colab:
 
