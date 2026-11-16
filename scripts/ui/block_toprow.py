@@ -11,23 +11,22 @@ if TYPE_CHECKING:
 
 class ToprowUI(UIBase):
     def create_ui_inline(self, cfg_general):
-        """Save controls rendered inside the global dataset bar (single row)
-        so loading and saving share one compact strip above the tabs."""
+        """Save module rendered on the right of the global dataset bar:
+        Save button on top, backup/metadata checkboxes below it."""
         self.btn_save_all_changes = gr.Button(
-            value="Save all changes", variant="primary", scale=2, min_width=150
+            value="Save all changes", variant="primary"
         )
-        self.cb_backup = gr.Checkbox(
-            value=cfg_general.backup,
-            label="Backup originals (.000, .001, ...)",
-            interactive=True,
-            scale=2,
-        )
-        self.cb_save_kohya_metadata = gr.Checkbox(
-            value=cfg_general.save_kohya_metadata,
-            label="kohya-ss metadata json",
-            interactive=True,
-            scale=2,
-        )
+        with gr.Row():
+            self.cb_backup = gr.Checkbox(
+                value=cfg_general.backup,
+                label="Backup originals (.000, .001, ...)",
+                interactive=True,
+            )
+            self.cb_save_kohya_metadata = gr.Checkbox(
+                value=cfg_general.save_kohya_metadata,
+                label="kohya-ss metadata json",
+                interactive=True,
+            )
 
     def create_ui_rest(self, cfg_general):
         with gr.Accordion(

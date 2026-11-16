@@ -14,31 +14,33 @@ class LoadDatasetUI(UIBase):
 
     def create_ui_global(self, cfg_general, toprow=None):
         """Compact dataset bar rendered above the workflow tabs: every tab
-        operates on the folder loaded here. Save controls share the same row
-        to keep the strip above the tabs as short as possible."""
+        operates on the folder loaded here. Left module = load controls;
+        right module = save controls (button on top, checkboxes below)."""
         with gr.Row(elem_classes=["dataset-bar"]):
-            self.tb_img_directory = gr.Textbox(
-                label="Dataset directory",
-                placeholder="C:\\directory\\of\\datasets",
-                value=cfg_general.dataset_dir,
-                scale=4,
-                min_width=200,
-            )
-            self.tb_caption_file_ext = gr.Textbox(
-                label="Caption ext",
-                placeholder=".txt (on Load and Save)",
-                value=cfg_general.caption_ext,
-                scale=1,
-                min_width=90,
-            )
-            self.btn_load_datasets = gr.Button(
-                value="Load", variant="primary", scale=0, min_width=70
-            )
-            self.btn_unload_datasets = gr.Button(
-                value="Unload", scale=0, min_width=70
-            )
+            with gr.Row(elem_classes=["dataset-bar-load"]):
+                self.tb_img_directory = gr.Textbox(
+                    label="Dataset directory",
+                    placeholder="C:\\directory\\of\\datasets",
+                    value=cfg_general.dataset_dir,
+                    scale=4,
+                    min_width=200,
+                )
+                self.tb_caption_file_ext = gr.Textbox(
+                    label="Caption ext",
+                    placeholder=".txt (on Load and Save)",
+                    value=cfg_general.caption_ext,
+                    scale=1,
+                    min_width=90,
+                )
+                self.btn_load_datasets = gr.Button(
+                    value="Load", variant="primary", scale=0, min_width=70
+                )
+                self.btn_unload_datasets = gr.Button(
+                    value="Unload", scale=0, min_width=70
+                )
             if toprow is not None:
-                toprow.create_ui_inline(cfg_general)
+                with gr.Column(elem_classes=["dataset-bar-save"], scale=2, min_width=300):
+                    toprow.create_ui_inline(cfg_general)
         if toprow is not None:
             toprow.create_ui_rest(cfg_general)
 

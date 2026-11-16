@@ -44,26 +44,50 @@
             const num = document.querySelector("#gallery_goto_page_num input");
             const btn = document.getElementById("gallery_goto_page_btn");
             if (!num || !btn) { turning = false; return; }
+            // Close the preview BEFORE turning the page: gradio clamps an
+            // open preview index to the new page's image count (e.g. index
+            // 199 on a 5-image page lands on the LAST image). With the
+            // preview closed, the post-turn click reopens it at the exact
+            // target: first image when moving forward, last when backward.
+            const preview = gallery.querySelector(".preview");
+            if (preview) {
+                preview.dispatchEvent(new KeyboardEvent("keydown", {
+                    code: "Escape", key: "Escape", bubbles: true, cancelable: true
+                }));
+            }
             const before = firstStripSrc();
             num.value = String(n);
             num.dispatchEvent(new Event("input", { bubbles: true }));
             num.dispatchEvent(new Event("change", { bubbles: true }));
             btn.click();
-            let tries = 0;
+            let tries = 0, detected = false, clicks = 0;
             const timer = setInterval(() => {
                 tries++;
                 const src = firstStripSrc();
                 const grid = gridButtons();
-                if (grid.length && src && src !== before) {
-                    clearInterval(timer);
-                    turning = false;
-                    const target = pick === "first" ? grid[0] : grid[grid.length - 1];
-                    if (target) { target.click(); target.focus(); }
-                } else if (tries > 100) {
-                    clearInterval(timer);
-                    turning = false;
+                if (!detected) {
+                    if (grid.length && src && src !== before) detected = true;
+                    else if (tries > 100) { clearInterval(timer); turning = false; }
+                    return;
                 }
-            }, 100);
+                const target = pick === "first" ? grid[0] : grid[grid.length - 1];
+                if (!target) return;
+                target.click();
+                clicks++;
+                // Verify the preview reopened on the target image; gradio
+                // may still be settling, so retry a few times if needed.
+                const pv = gallery.querySelector(".preview");
+                const pvImg = pv && pv.querySelector("img");
+                const tImg = target.querySelector("img");
+                const ok = pvImg && tImg && pvImg.src === tImg.src;
+                if (ok || clicks >= 6) {
+                    clearInterval(timer);
+                    turning = false;
+                    const strip = stripButtons();
+                    const sTarget = pick === "first" ? strip[0] : strip[strip.length - 1];
+                    (sTarget || target).focus();
+                }
+            }, 150);
         }
 
         // Capture phase: runs before gradio's own keydown handler on the

@@ -222,7 +222,8 @@ button.custom-button{
     padding: 10px 14px !important;
 }
 
-/* compact global dataset bar above the workflow tabs */
+/* compact global dataset bar above the workflow tabs:
+   left module = load controls, right module = save controls */
 .dataset-bar {
     align-items: flex-end !important;
     flex-wrap: wrap;
@@ -234,23 +235,48 @@ button.custom-button{
 .dataset-bar label span {
     font-size: 0.8em;
 }
-.dataset-bar .block.padded {
+.dataset-bar-load {
+    align-items: flex-end !important;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex-grow: 4;
+}
+.dataset-bar-load .block.padded {
     padding: 0;
 }
-.dataset-bar .block label {
+.dataset-bar-load .block label {
     margin-bottom: 0;
 }
-.dataset-bar .block label span {
+.dataset-bar-load .block label span {
     display: block;
     margin-bottom: 4px;
 }
-.dataset-bar .block textarea {
+.dataset-bar-load .block textarea {
     height: 34px;
     min-height: 34px;
 }
-.dataset-bar button {
+.dataset-bar-load button {
     height: 36px;
     min-height: 36px;
+}
+.dataset-bar-save {
+    border: 1px solid var(--border-color-primary, #ccc);
+    border-radius: 8px;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+    background: var(--block-background-fill, #fafafa);
+}
+.dataset-bar-save > button {
+    width: 100%;
+    height: 36px;
+    min-height: 36px;
+}
+.dataset-bar-save .form {
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.dataset-bar-save .block.padded {
+    padding: 0;
 }
 
 /* compact save/backup topbar */
