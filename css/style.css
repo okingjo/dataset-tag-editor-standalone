@@ -223,23 +223,27 @@ button.custom-button{
 }
 
 /* compact global dataset bar above the workflow tabs:
-   left module = load controls, right module = save controls */
+   two sibling cards of equal height — left = load, right = save */
 .dataset-bar {
-    align-items: flex-end !important;
+    align-items: stretch !important;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 6px 14px !important;
-    border: 1px solid var(--border-color-primary);
-    border-radius: 8px;
+    padding: 0 !important;
+    border: none;
+    background: transparent;
 }
 .dataset-bar label span {
     font-size: 0.8em;
 }
 .dataset-bar-load {
     align-items: flex-end !important;
-    flex-wrap: wrap;
+    flex-wrap: nowrap !important;
     gap: 12px;
-    flex-grow: 4;
+    flex-grow: 5;
+    border: 1px solid var(--border-color-primary, #ccc);
+    border-radius: 8px;
+    padding: 8px 12px !important;
+    background: var(--block-background-fill, #fafafa);
 }
 .dataset-bar-load .block.padded {
     padding: 0;
@@ -265,6 +269,7 @@ button.custom-button{
     padding: 8px 12px !important;
     gap: 6px !important;
     background: var(--block-background-fill, #fafafa);
+    flex-grow: 1;
 }
 .dataset-bar-save > button {
     width: 100%;

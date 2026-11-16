@@ -39,7 +39,7 @@ class LoadDatasetUI(UIBase):
                     value="Unload", scale=0, min_width=70
                 )
             if toprow is not None:
-                with gr.Column(elem_classes=["dataset-bar-save"], scale=2, min_width=300):
+                with gr.Column(elem_classes=["dataset-bar-save"], scale=1, min_width=300):
                     toprow.create_ui_inline(cfg_general)
         if toprow is not None:
             toprow.create_ui_rest(cfg_general)
